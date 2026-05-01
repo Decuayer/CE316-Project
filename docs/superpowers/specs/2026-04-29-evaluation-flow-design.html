@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evaluation Flow — Design Specification (IAE)</title>
+<style>
+  :root {
+    --fg: #1f2328;
+    --fg-muted: #59636e;
+    --bg: #ffffff;
+    --bg-muted: #f6f8fa;
+    --bg-code: #f6f8fa;
+    --border: #d0d7de;
+    --border-muted: #d8dee4;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --table-stripe: #f6f8fa;
+    --status-ok: #1f883d;
+    --status-warn: #9a6700;
+    --status-bad: #cf222e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--fg);
+    background: var(--bg);
+    line-height: 1.6;
+    font-size: 16px;
+  }
+  .container {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 48px 32px 96px;
+  }
+  header.doc-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+    margin-bottom: 32px;
+  }
+  header.doc-header .meta {
+    color: var(--fg-muted);
+    font-size: 14px;
+    margin-top: 4px;
+  }
+  header.doc-header .meta .pill {
+    display: inline-block;
+    padding: 2px 10px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 999px;
+    font-weight: 500;
+    margin-right: 8px;
+  }
+  h1 { font-size: 32px; line-height: 1.25; margin: 0 0 4px; }
+  h2 { font-size: 24px; margin: 48px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border-muted); }
+  h3 { font-size: 19px; margin: 32px 0 8px; }
+  h4 { font-size: 16px; margin: 20px 0 4px; }
+  p { margin: 0 0 16px; }
+  blockquote {
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border-left: 4px solid var(--accent);
+    background: var(--accent-soft);
+    color: var(--fg);
+    border-radius: 0 6px 6px 0;
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+  code {
+    font-family: "SF Mono", "Menlo", Consolas, "Liberation Mono", monospace;
+    font-size: 0.92em;
+    padding: 2px 6px;
+    background: var(--bg-code);
+    border-radius: 4px;
+    border: 1px solid var(--border-muted);
+  }
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border-muted);
+    border-radius: 6px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    line-height: 1.5;
+    margin: 0 0 16px;
+  }
+  pre code {
+    padding: 0;
+    background: none;
+    border: none;
+    font-size: 13.5px;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0 0 20px;
+    font-size: 14.5px;
+  }
+  th, td {
+    border: 1px solid var(--border-muted);
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: var(--bg-muted); font-weight: 600; }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+  ul, ol { margin: 0 0 16px; padding-left: 24px; }
+  li { margin-bottom: 4px; }
+  li > ul, li > ol { margin-top: 4px; margin-bottom: 4px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  hr { border: 0; border-top: 1px solid var(--border); margin: 40px 0; }
+  .mermaid {
+    background: var(--bg-muted);
+    border: 1px solid var(--border-muted);
+    border-radius: 8px;
+    padding: 24px;
+    margin: 0 0 20px;
+    text-align: center;
+    overflow-x: auto;
+  }
+  /* Status pills used in error matrix etc. */
+  .status { font-weight: 500; padding: 2px 8px; border-radius: 999px; font-size: 12.5px; }
+  .status.pass { background: #dafbe1; color: var(--status-ok); }
+  .status.fail { background: #ffebe9; color: var(--status-bad); }
+  .status.warn { background: #fff8c5; color: var(--status-warn); }
+  .toc {
+    background: var(--bg-muted);
+    border: 1px solid var(--border-muted);
+    border-radius: 6px;
+    padding: 16px 16px 12px 32px;
+    margin: 0 0 32px;
+  }
+  .toc-title {
+    font-weight: 600;
+    margin: -4px 0 8px -16px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--fg-muted);
+  }
+  .toc ul { margin: 0; padding-left: 16px; }
+  .toc li { margin-bottom: 2px; font-size: 14.5px; }
+  .small { font-size: 13.5px; color: var(--fg-muted); }
+  @media (max-width: 640px) {
+    .container { padding: 24px 16px 60px; }
+    h1 { font-size: 26px; }
+    h2 { font-size: 20px; }
+    h3 { font-size: 17px; }
+    pre { font-size: 12.5px; }
+    table { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="doc-header">
+  <h1>Evaluation Flow — Design Specification</h1>
+  <div class="meta">
+    <span class="pill">Approved</span>
+    <span>Date: 2026-04-29</span>
+    &nbsp;·&nbsp;
+    <span>Refines <a href="2026-04-20-iae-design.md">2026-04-20-iae-design.md</a></span>
+  </div>
+  <p class="small" style="margin-top:12px;">Specifies the per-student evaluation pipeline (input passing, execution, output comparison) for the IAE. Supersedes the input/comparison sections of the original IAE spec while leaving the rest intact.</p>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ul>
+    <li><a href="#why">Why this spec exists</a></li>
+    <li><a href="#locked">Locked design decisions</a></li>
+    <li><a href="#diagrams">Flow diagrams</a>
+      <ul>
+        <li><a href="#diag-batch">Batch run — system level</a></li>
+        <li><a href="#diag-student">Per-student pipeline</a></li>
+        <li><a href="#diag-data">Data flow for input and expected output</a></li>
+      </ul>
+    </li>
+    <li><a href="#data-model">Data model refinements</a></li>
+    <li><a href="#pipeline">Per-student pipeline (step detail)</a></li>
+    <li><a href="#templates">Template variable substitution rules</a></li>
+    <li><a href="#diff-ui">Comparison and diff UI</a></li>
+    <li><a href="#run-button">Run button states</a></li>
+    <li><a href="#cleanup">"Clean up artifacts" button</a></li>
+    <li><a href="#errors">Error handling matrix</a></li>
+    <li><a href="#impl">Implementation notes for ExecutionService</a></li>
+    <li><a href="#changes">Changes against the original spec</a></li>
+    <li><a href="#out-of-scope">What's intentionally not in v1</a></li>
+  </ul>
+</nav>
+
+<h2 id="why">Why this spec exists</h2>
+<p>The original spec (<a href="2026-04-20-iae-design.md"><code>2026-04-20-iae-design.md</code></a>) modeled a project's input as a single <code>programArgs</code> string and the expected output as a single <code>expectedOutput</code> string with strict char-for-char comparison. Two issues surfaced once we walked through the actual evaluation pipeline:</p>
+<ol>
+  <li><strong>Input source.</strong> The project description allows the lecturer to type input directly OR point to a text file. The original spec only modeled the typed case.</li>
+  <li><strong>Tokenization and execution semantics.</strong> The original spec didn't define how a string of args becomes individual <code>argv</code> entries, nor how template variables get substituted without exposing the lecturer to shell-quoting hazards.</li>
+</ol>
+<p>This spec resolves both, plus pins down the per-student pipeline, error handling, and UI feedback so the implementation can be unambiguous.</p>
+
+<h2 id="locked">Locked design decisions</h2>
+<table>
+  <thead><tr><th>Decision</th><th>Choice</th><th>Reason</th></tr></thead>
+  <tbody>
+    <tr><td>Input source</td><td>Typed text <strong>or</strong> file path</td><td>Matches description ("a file that contains the strings ... could be passed as command line arguments to <code>main</code>")</td></tr>
+    <tr><td>Input tokenization</td><td>Newline-split (one arg per line)</td><td>Spaces preserved within a line; trivial to author both in UI and in a file</td></tr>
+    <tr><td>Test cases per project</td><td>Exactly one (one input + one expected output)</td><td>Matches description literally; multi-test deferred</td></tr>
+    <tr><td>Expected output source</td><td>Typed text <strong>or</strong> file path</td><td>Symmetric with input</td></tr>
+    <tr><td>Comparator</td><td><strong>Strict byte-for-byte</strong> equality. No normalization.</td><td>Lecturer's explicit choice. Diff UI exposes whitespace differences clearly so failures are diagnosable.</td></tr>
+    <tr><td>Pipeline order</td><td>Sequential (one student at a time)</td><td>Predictable, simple progress UI, no contention on shared executables</td></tr>
+    <tr><td>Working directory</td><td>The student's extracted folder (in-place)</td><td>Simplest, no copying overhead</td></tr>
+    <tr><td>Stdin on child process</td><td><strong>Closed</strong></td><td>Programs that try to read stdin get EOF immediately and exit, instead of hanging until timeout</td></tr>
+    <tr><td>Compile artifacts</td><td><strong>Left in place</strong> by default; manual "Clean up artifacts" button on the project page</td><td>Helps the lecturer debug; cleanup is opt-in</td></tr>
+    <tr><td>Run button feedback</td><td>Loading state ("Running…") for the duration of the batch; no per-student live progress bar</td><td>Simpler UI; results table populates when done</td></tr>
+    <tr><td>Process spawning</td><td><code>child_process.execFile</code> (not <code>exec</code>) — no shell</td><td>Eliminates shell-quoting and shell-injection concerns</td></tr>
+    <tr><td>Per-execution timeout</td><td>10 seconds (configurable in code, not exposed in UI v1)</td><td>Catches infinite loops without surprise</td></tr>
+    <tr><td>Robustness</td><td>Each student wrapped in try/catch; one student's failure never blocks another</td><td>Matches description: "must continue with the next student"</td></tr>
+  </tbody>
+</table>
+
+<h2 id="diagrams">Flow diagrams</h2>
+
+<h3 id="diag-batch">Batch run — system level</h3>
+<p>What happens when the lecturer clicks <strong>Run</strong> on a project:</p>
+<div class="mermaid">
+sequenceDiagram
+    actor L as Lecturer
+    participant App as IAE App
+    participant Eval as Evaluator
+
+    L->>App: Click "Run"
+    App->>App: Show "Running…" on the button
+    App->>Eval: Start evaluation
+
+    loop For each student submission
+        Eval->>Eval: Evaluate this student<br/>(see next diagram)
+        Eval->>Eval: Save the student's result
+    end
+
+    Eval-->>App: All results ready
+    App->>App: Show the results table
+</div>
+<p>The button stays in its "Running…" state until the whole batch is done; then the results table appears. There's no per-student live progress in this version.</p>
+
+<h3 id="diag-student">Per-student pipeline</h3>
+<p>What happens for a single student inside the loop:</p>
+<div class="mermaid">
+flowchart TD
+    Start([Student submission]) --> Unzip[Unzip the submission]
+    Unzip -- failed --> ZipErr[/Result: ZIP error/]
+    Unzip -- ok --> FindSrc{Source file<br/>found?}
+
+    FindSrc -- no --> NoSrc[/Result: source missing/]
+    FindSrc -- yes --> NeedsCompile{Language needs<br/>compiling?}
+
+    NeedsCompile -- no --> ReadIn
+    NeedsCompile -- yes --> Compile[Compile the source code]
+
+    Compile -- failed --> CompileErr[/Result: compile error/]
+    Compile -- ok --> ReadIn[Read the test input]
+
+    ReadIn --> RunProg[Run the program<br/>with the input]
+
+    RunProg -- took too long --> Timeout[/Result: timeout/]
+    RunProg -- crashed --> RuntimeErr[/Result: runtime error/]
+    RunProg -- ok --> ReadExp[Read the expected output]
+
+    ReadExp --> Cmp{Output matches<br/>expected?}
+
+    Cmp -- yes --> Pass[/Result: pass/]
+    Cmp -- no --> Fail[/Result: fail/]
+
+    ZipErr --> Save
+    NoSrc --> Save
+    CompileErr --> Save
+    Timeout --> Save
+    RuntimeErr --> Save
+    Pass --> Save
+    Fail --> Save
+
+    Save[Save the result for this student]
+</div>
+<p>Every path ends with a saved result, so a single student's failure never stops the batch — the next student starts immediately afterward.</p>
+
+<h3 id="diag-data">How input and expected output flow through the test</h3>
+<p>The lecturer defines two pieces of test data on the project — the input and the expected output. Each can be typed in directly or read from a file. Here is how they flow during evaluation:</p>
+<div class="mermaid">
+flowchart LR
+    subgraph Project[Lecturer's test setup]
+        InSrc[Test input<br/>typed or from file]
+        ExpSrc[Expected output<br/>typed or from file]
+    end
+
+    InSrc --> Convert[Split into a list<br/>of arguments]
+    ExpSrc --> AsText[Read as text]
+
+    Convert --> Args[Arguments to pass]
+    AsText --> Expected[Expected text]
+
+    Args --> RunProg[Run the student's program]
+    RunProg --> Actual[Program's actual output]
+    Actual --> Cmp{Same as<br/>expected?}
+    Expected --> Cmp
+    Cmp -- yes --> P[/Pass/]
+    Cmp -- no --> F[/Fail/]
+</div>
+<p>The input is split into separate arguments (one per line) before being handed to the student's program. The expected output is used as a single block of text — it's compared exactly against whatever the program prints.</p>
+
+<hr>
+
+<h2 id="data-model">Data model refinements</h2>
+<p>The <code>Project</code> interface in <code>shared/types.ts</code> changes as follows:</p>
+<pre><code>// Discriminated union — captures whether the value is typed text or a file path
+export type DataSource =
+  | { type: 'text'; value: string }
+  | { type: 'file'; path: string };
+
+export interface Project {
+  id: string;
+  name: string;
+  configurationId: string;
+  configuration: Configuration;          // snapshot at creation time
+
+  input: DataSource;                     // [R7] replaces `programArgs: string`
+  expectedOutput: DataSource;            // [R8] replaces `expectedOutput: string`
+
+  submissionsDir: string;                // [R6]
+
+  createdAt: string;
+  updatedAt: string;
+}</code></pre>
+<p><strong>Migration note:</strong> there are no persisted projects yet (greenfield), so no on-disk migration is needed — just update the type and the construction sites.</p>
+<p><code>Configuration</code>, <code>StudentResult</code>, and <code>ProjectResults</code> remain as defined in the original spec. <code>StudentResult.expectedOutput</code> and <code>StudentResult.actualOutput</code> continue to hold the <strong>resolved</strong> strings (post file-read), not the source descriptors.</p>
+
+<h2 id="pipeline">Per-student pipeline (step detail)</h2>
+<p>The pipeline runs once per extracted submission folder. Steps below; any uncaught exception in any step degrades gracefully to the listed status and the loop continues to the next student.</p>
+<pre><code>1. Extract ZIP                        → submissions/{studentId}/
+2. Locate source file                 → fail: missing_source
+3. Compile (if compileCommand set)    → fail: compile_error
+4. Resolve input (text or file read)  → fail: zip_error / runtime_error class
+5. Run executable with argv           → fail: timeout | runtime_error
+6. Resolve expected output            → fail: zip_error class
+7. Compare stdout vs expected (==)    → pass | fail
+8. Append StudentResult to results.json</code></pre>
+
+<h3>Step details</h3>
+
+<h4>1. Extract ZIP</h4>
+<ul>
+  <li><code>studentId</code> = ZIP filename without the <code>.zip</code> extension. (Description: "a directory with the student ID is created when each ZIP file is unzipped.")</li>
+  <li>Extracted into <code>submissions/{studentId}/</code>.</li>
+  <li>Failure → status <code>zip_error</code>; skip remaining steps.</li>
+</ul>
+
+<h4>2. Locate source file</h4>
+<ul>
+  <li>Look for <code>configuration.sourceFileExpected</code> (e.g., <code>main.c</code>) at the <strong>root</strong> of the extracted folder.</li>
+  <li>Not found → status <code>missing_source</code>; skip remaining steps.</li>
+</ul>
+
+<h4>3. Compile (only if <code>configuration.compileCommand</code> is set)</h4>
+<ul>
+  <li>Substitute template variables in <code>configuration.compileArgs</code>:
+    <ul>
+      <li><code>{{sourceFile}}</code> → the located source file's name (e.g., <code>main.c</code>)</li>
+      <li><code>{{outputName}}</code> → source file name without extension (e.g., <code>main</code>)</li>
+    </ul>
+  </li>
+  <li>Tokenize the substituted args on whitespace (v1 limitation: no quoting; args containing spaces are not supported in v1).</li>
+  <li>Spawn: <code>execFile(compileCommand, tokenizedArgs, { cwd: studentFolder, stdio: ['ignore','pipe','pipe'] })</code>.</li>
+  <li>Capture stdout, stderr, exitCode.</li>
+  <li>Non-zero exit → status <code>compile_error</code>; record stderr; skip remaining steps.</li>
+</ul>
+
+<h4>4. Resolve input</h4>
+<ul>
+  <li>If <code>project.input.type === 'text'</code>: use <code>project.input.value</code>.</li>
+  <li>If <code>project.input.type === 'file'</code>: read the file at <code>project.input.path</code> as UTF-8.</li>
+  <li>Split the resulting string on <code>\n</code>, then strip a trailing <code>\r</code> from each line. This is <strong>input parsing</strong>, not output normalization — its purpose is that a Windows-saved input file produces clean argv strings instead of strings that end in <code>\r</code>. The output comparator is unaffected and remains strict.</li>
+  <li>Drop a trailing empty line if the source ended with <code>\n</code> (so <code>"a\nb\n"</code> becomes <code>["a","b"]</code>, not <code>["a","b",""]</code>).</li>
+  <li>The result is <code>argvFromInput: string[]</code> — each line is one <code>argv</code> element with internal spaces preserved.</li>
+</ul>
+
+<h4>5. Run</h4>
+<ul>
+  <li>Substitute template variables in <code>configuration.runArgs</code>:
+    <ul>
+      <li><code>{{sourceFile}}</code> → source file name (useful for interpreted languages, e.g., <code>python main.py</code>)</li>
+      <li><code>{{outputName}}</code> → compiled output name</li>
+      <li><code>{{args}}</code> → <strong>spread</strong> <code>argvFromInput</code> into the position of this token. Each element becomes a distinct <code>argv</code> entry.</li>
+    </ul>
+  </li>
+  <li>Tokenize the rest of <code>runArgs</code> on whitespace (same v1 limitation).</li>
+  <li>Spawn: <code>execFile(runCommand, finalArgvArray, { cwd: studentFolder, stdio: ['ignore','pipe','pipe'], timeout: 10000 })</code>.</li>
+  <li>Capture stdout, stderr, exitCode.
+    <ul>
+      <li>Process killed by timeout → status <code>timeout</code>; skip comparison.</li>
+      <li>Non-zero exit → status <code>runtime_error</code>; record stderr; skip comparison.</li>
+    </ul>
+  </li>
+</ul>
+
+<h4>6. Resolve expected output</h4>
+<p>Same logic as step 4 but for <code>project.expectedOutput</code>. The resolved value is a single string (no splitting; the file's bytes are used verbatim).</p>
+
+<h4>7. Compare</h4>
+<p><code>actualStdout === expectedString</code> (JavaScript triple-equals, both as UTF-8 strings). Match → <code>pass</code>; else → <code>fail</code>. The actual and expected strings are both stored on the <code>StudentResult</code> so the diff UI can render them.</p>
+
+<h4>8. Persist</h4>
+<p>Append the <code>StudentResult</code> to <code>results/results.json</code>. Each student is committed individually so a process crash mid-run still preserves prior students' results.</p>
+
+<h2 id="templates">Template variable substitution rules</h2>
+<table>
+  <thead><tr><th>Variable</th><th>Replaced with</th><th>Where allowed</th></tr></thead>
+  <tbody>
+    <tr><td><code>{{sourceFile}}</code></td><td>the located source file name (e.g., <code>main.c</code>)</td><td><code>compileArgs</code>, <code>runArgs</code></td></tr>
+    <tr><td><code>{{outputName}}</code></td><td>source file name without extension (e.g., <code>main</code>)</td><td><code>compileArgs</code>, <code>runArgs</code></td></tr>
+    <tr><td><code>{{args}}</code></td><td>the resolved input array, <strong>spread</strong> as multiple <code>argv</code> entries</td><td><code>runArgs</code> only</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Substitution algorithm:</strong></p>
+<ol>
+  <li>Split the args template on whitespace into tokens.</li>
+  <li>For each token: if it equals <code>{{args}}</code> exactly, replace by spreading <code>argvFromInput</code>. If it contains <code>{{sourceFile}}</code> or <code>{{outputName}}</code>, do plain string substitution within the token. Otherwise pass through.</li>
+  <li>The result is an array passed directly to <code>execFile</code>. No shell involvement.</li>
+</ol>
+<p><strong>v1 limitation:</strong> args containing spaces (e.g., a Windows path with <code>Program Files</code>) are not representable in <code>compileArgs</code>/<code>runArgs</code>. The lecturer can put such paths in <code>compileCommand</code>/<code>runCommand</code> themselves (those fields are full strings, not tokenized). If quoted-string support becomes necessary later, swap the tokenizer for a shell-lex parser.</p>
+
+<h2 id="diff-ui">Comparison and diff UI</h2>
+<p><strong>Engine:</strong> strict equality (<code>===</code>) on the two strings. No normalization, no trimming, no line-ending coercion.</p>
+<p><strong>Diff view (StudentDetail page):</strong></p>
+<ul>
+  <li>Side-by-side: expected (left) vs actual (right).</li>
+  <li>Toggle: <strong>"Show whitespace markers"</strong> (default on). When on, renders:
+    <ul>
+      <li>space → <code>·</code></li>
+      <li>tab → <code>→</code></li>
+      <li><code>\r</code> → <code>␍</code></li>
+      <li><code>\n</code> → <code>↵\n</code> (visible glyph plus actual newline so layout is preserved)</li>
+      <li><code>\r\n</code> → <code>␍↵\n</code></li>
+    </ul>
+  </li>
+  <li>A line-by-line diff highlights differing lines in red; matching lines in default color.</li>
+</ul>
+<p>This makes it visually obvious when a failure is "the program output <code>\n</code> but the lecturer pasted <code>\r\n</code> into the expected field" — without the comparator silently masking it.</p>
+
+<h2 id="run-button">Run button states</h2>
+<p>The run button on the project page has three states:</p>
+<table>
+  <thead><tr><th>State</th><th>Trigger</th><th>UI</th></tr></thead>
+  <tbody>
+    <tr><td>Idle</td><td>No run in progress</td><td>Label: "Run", enabled</td></tr>
+    <tr><td>Running</td><td>Batch in progress</td><td>Label: "Running…", disabled, spinner inside the button</td></tr>
+    <tr><td>Done</td><td>Batch completed</td><td>Returns to "Run" idle state; results table refreshes below</td></tr>
+  </tbody>
+</table>
+<p>No per-student progress bar in v1. Total batch duration is bounded by <code>studentCount × (compile_time + run_time + 10s_timeout_max)</code>, which for typical class sizes is acceptable.</p>
+
+<h2 id="cleanup">"Clean up artifacts" button</h2>
+<p>A secondary button on the project page: <strong>"Clean up artifacts"</strong>.</p>
+<p>Behavior: walks <code>submissions/{studentId}/</code> for every student and removes anything <strong>not</strong> the original source file. Specifically: removes any file whose name is not <code>configuration.sourceFileExpected</code>. Leaves <code>submissions/</code>, the student folders, and source files untouched.</p>
+<p>Confirmation modal: "This will delete compiled binaries and any other generated files in every student folder. Source files will be kept. Continue?"</p>
+
+<h2 id="errors">Error handling matrix</h2>
+<p>Every failure mode produces a recorded <code>StudentResult</code> with a status; the loop continues to the next student.</p>
+<table>
+  <thead><tr><th>Failure</th><th>Status</th><th>Recorded</th></tr></thead>
+  <tbody>
+    <tr><td>ZIP can't be extracted</td><td><span class="status fail">zip_error</span></td><td>exception message</td></tr>
+    <tr><td>Source file not at folder root</td><td><span class="status warn">missing_source</span></td><td>(none)</td></tr>
+    <tr><td>Compile exits non-zero</td><td><span class="status fail">compile_error</span></td><td>compile stdout + stderr + exitCode</td></tr>
+    <tr><td>Compile binary not found (<code>ENOENT</code>)</td><td><span class="status fail">compile_error</span></td><td>clear message: "compiler not found: {command}"</td></tr>
+    <tr><td>Input file path set but file missing/unreadable</td><td><span class="status fail">runtime_error</span></td><td>exception message</td></tr>
+    <tr><td>Run binary not found (<code>ENOENT</code>)</td><td><span class="status fail">runtime_error</span></td><td>clear message: "executable not found: {command}"</td></tr>
+    <tr><td>Run exceeds timeout</td><td><span class="status warn">timeout</span></td><td>partial stdout + "killed after 10s" note</td></tr>
+    <tr><td>Run exits non-zero</td><td><span class="status fail">runtime_error</span></td><td>run stdout + stderr + exitCode</td></tr>
+    <tr><td>Expected output file missing/unreadable</td><td><span class="status fail">runtime_error</span></td><td>exception message; comparison skipped</td></tr>
+    <tr><td>Output mismatch</td><td><span class="status fail">fail</span></td><td>full actual + full expected</td></tr>
+    <tr><td>Output match</td><td><span class="status pass">pass</span></td><td>full actual</td></tr>
+  </tbody>
+</table>
+<p>Top-level run handler catches anything that escapes a student's pipeline and surfaces it as a generic <code>runtime_error</code> for that student.</p>
+
+<h2 id="impl">Implementation notes for <code>ExecutionService</code></h2>
+<ul>
+  <li>Single class, methods: <code>runAll(project)</code>, <code>runStudent(studentDir, project)</code>, <code>cleanupArtifacts(project)</code>.</li>
+  <li><code>runStudent</code> returns a <code>StudentResult</code> and never throws — exceptions become statuses.</li>
+  <li><code>runAll</code> iterates students sequentially, persists each result as it completes, and returns the final <code>ProjectResults</code>.</li>
+  <li>IPC: <code>execution:run(projectId)</code> blocks until the batch completes and returns the <code>ProjectResults</code>. The renderer relies on the request's promise lifecycle to drive the run-button loading state — no separate progress channel needed in v1.</li>
+  <li><code>execution:cleanup(projectId)</code> is a separate IPC call wired to the cleanup button.</li>
+</ul>
+
+<h2 id="changes">Changes against the original 2026-04-20 spec</h2>
+<p>The following sections of <a href="2026-04-20-iae-design.md"><code>2026-04-20-iae-design.md</code></a> need to be aligned (or considered superseded):</p>
+<ol>
+  <li><strong>Data Models → Project</strong>: <code>programArgs: string</code> → <code>input: DataSource</code>; <code>expectedOutput: string</code> → <code>expectedOutput: DataSource</code>.</li>
+  <li><strong>Service Layer → ExecutionService</strong>: signature of <code>runStudent</code> simplified; sequential-only; cleanup method added.</li>
+  <li><strong>Output Comparison</strong>: stays "exact match" (already correct), but adds the diff-UI whitespace-marker toggle.</li>
+  <li><strong>UI Design → Project Detail</strong>: run button gets three states; "Clean up artifacts" button added.</li>
+  <li><strong>IPC</strong>: add <code>execution:cleanup</code>. The signature of <code>execution:run</code> is unchanged.</li>
+</ol>
+<p>These edits will be applied to the original spec when this design is approved, with a small note pointing readers at this addendum for the detailed pipeline.</p>
+
+<h2 id="out-of-scope">What's intentionally not in v1</h2>
+<ul>
+  <li>Multiple test cases per project</li>
+  <li>Stdin-fed input</li>
+  <li>Forgiving comparators (line-trimmed, token-compare, custom checker)</li>
+  <li>Floating-point tolerance</li>
+  <li>Quoted strings in args templates</li>
+  <li>Configurable per-execution timeout in the UI</li>
+  <li>Live per-student progress bar</li>
+  <li>Parallel student execution</li>
+</ul>
+<p>Each is a deliberate scope cut. The data model and pipeline are structured so any of these can be added without breaking changes (e.g., adding a <code>testCases: TestCase[]</code> field alongside the current single-test fields, or swapping the comparator for a strategy interface).</p>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+    sequence: { useMaxWidth: true, mirrorActors: false }
+  });
+</script>
+</body>
+</html>
