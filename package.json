@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
+    "better-sqlite3": "^12.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.577.0",
@@ -19,17 +20,18 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.1.1",
     "tailwind-merge": "^2.6.0",
-    "uuid": "^11.0.5"
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.7",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
-    "electron": "^34.0.2",
-    "electron-builder": "^25.1.8",
+    "electron": "^41.4.0",
+    "electron-builder": "^26.8.1",
     "postcss": "^8.5.1",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3",

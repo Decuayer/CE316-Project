@@ -1,89 +1,105 @@
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import type { Configuration } from '@shared/types';
+import type { Configuration } from '../../shared/types';
 import { FileService } from './FileService';
+import { DatabaseService } from './DatabaseService';
 
-/**
- * ConfigService - Task 4 [R4][R5]
- *
- * CRUD + import/export for language configurations.
- *
- * Storage model: standalone JSON files in ~/.iae/configurations/<id>.json.
- * One file per configuration makes import/export trivial (just copy a file)
- * and directly satisfies R5.
- */
+
 export class ConfigService {
   private fileService = new FileService();
 
-  constructor(private configDir: string) {}
+  constructor(private dbService: DatabaseService) {}
 
-  /**
-   * TODO [R4]: list every .json file in configDir, parse each, return Configuration[].
-   *  - Skip files that fail to parse (log a warning) so a single bad file
-   *    does not break the whole list.
-   *  - Sort by name (case-insensitive, alphabetical) for stable UI ordering.
-   *  - Ensure configDir exists (fileService.ensureDir) on first call.
-   */
+
   async getAll(): Promise<Configuration[]> {
-    void this.fileService;
-    void this.configDir;
-    throw new Error('Not implemented: ConfigService.getAll');
+    const db = this.dbService.getDb();
+    const stmt = db.prepare('SELECT * FROM configurations ORDER BY name COLLATE NOCASE ASC');
+    return stmt.all() as Configuration[];
   }
 
-  /**
-   * TODO [R4]: read configDir/<id>.json and parse to Configuration.
-   * Return null if the file is missing.
-   */
-  async getById(_id: string): Promise<Configuration | null> {
-    throw new Error('Not implemented: ConfigService.getById');
+
+  async getById(id: string): Promise<Configuration | null> {
+    const db = this.dbService.getDb();
+    const stmt = db.prepare('SELECT * FROM configurations WHERE id = ?');
+    const config = stmt.get(id) as Configuration | undefined;
+    return config || null;
   }
 
-  /**
-   * TODO [R4]: persist a new Configuration.
-   *  - Generate a fresh uuid for `id`.
-   *  - Set `createdAt` and `updatedAt` to new Date().toISOString().
-   *  - Write configDir/<id>.json.
-   *  - Return the persisted Configuration so the UI can refresh.
-   */
-  async create(_data: Omit<Configuration, 'id' | 'createdAt' | 'updatedAt'>): Promise<Configuration> {
-    void uuidv4;
-    throw new Error('Not implemented: ConfigService.create');
+
+  async create(data: Omit<Configuration, 'id' | 'createdAt' | 'updatedAt'>): Promise<Configuration> {
+    const db = this.dbService.getDb();
+    const id = uuidv4();
+    const now = new Date().toISOString();
+
+    const stmt = db.prepare(`
+      INSERT INTO configurations (id, name, language, compileCommand, compileArgs, runCommand, runArgs, sourceFileExpected, createdAt, updatedAt)
+      VALUES (@id, @name, @language, @compileCommand, @compileArgs, @runCommand, @runArgs, @sourceFileExpected, @createdAt, @updatedAt)
+    `);
+
+    stmt.run({
+      id,
+      name: data.name,
+      language: data.language,
+      compileCommand: data.compileCommand || null,
+      compileArgs: data.compileArgs || null,
+      runCommand: data.runCommand,
+      runArgs: data.runArgs || null,
+      sourceFileExpected: data.sourceFileExpected,
+      createdAt: now,
+      updatedAt: now
+    });
+
+    return this.getById(id) as Promise<Configuration>;
   }
 
-  /**
-   * TODO [R4]: load existing, shallow-merge data, bump updatedAt, persist.
-   * Throw if id does not exist.
-   */
-  async update(_id: string, _data: Partial<Configuration>): Promise<Configuration> {
-    throw new Error('Not implemented: ConfigService.update');
+
+  async update(id: string, data: Partial<Configuration>): Promise<Configuration> {
+    const existing = await this.getById(id);
+    if (!existing) throw new Error(`Configuration not found: ${id}`);
+
+    const db = this.dbService.getDb();
+    const updated = { ...existing, ...data, updatedAt: new Date().toISOString() };
+
+    const stmt = db.prepare(`
+      UPDATE configurations 
+      SET name = @name, language = @language, compileCommand = @compileCommand, 
+          compileArgs = @compileArgs, runCommand = @runCommand, runArgs = @runArgs, 
+          sourceFileExpected = @sourceFileExpected, updatedAt = @updatedAt
+      WHERE id = @id
+    `);
+
+    stmt.run(updated);
+    return updated;
   }
 
-  /**
-   * TODO [R4]: delete configDir/<id>.json. No-op if it does not exist.
-   * Snapshotted projects are unaffected (config is copied into project at creation).
-   */
-  async delete(_id: string): Promise<void> {
-    throw new Error('Not implemented: ConfigService.delete');
+
+  async delete(id: string): Promise<void> {
+    const db = this.dbService.getDb();
+    const stmt = db.prepare('DELETE FROM configurations WHERE id = ?');
+    stmt.run(id);
   }
 
-  /**
-   * TODO [R5]: import a .json config file from filePath.
-   *  - Read + parse to validate the file is a valid Configuration.
-   *  - Regenerate `id` to avoid collisions on the importing machine.
-   *  - Reset `createdAt`/`updatedAt` to the import time.
-   *  - Write to configDir/<newId>.json.
-   *  - Return the resulting Configuration.
-   */
-  async import(_filePath: string): Promise<Configuration> {
-    void path;
-    throw new Error('Not implemented: ConfigService.import');
+
+  async import(filePath: string): Promise<Configuration> {
+    // Reads as a Json 
+    const content = await this.fileService.readJson(filePath) as Configuration;
+
+    return this.create({
+      name: content.name,
+      language: content.language,
+      compileCommand: content.compileCommand,
+      compileArgs: content.compileArgs,
+      runCommand: content.runCommand,
+      runArgs: content.runArgs,
+      sourceFileExpected: content.sourceFileExpected
+    });
   }
 
-  /**
-   * TODO [R5]: copy configDir/<id>.json to targetPath verbatim.
-   * The exported file must be a valid input to import() on any other machine.
-   */
-  async export(_id: string, _targetPath: string): Promise<void> {
-    throw new Error('Not implemented: ConfigService.export');
+  async export(id: string, targetPath: string): Promise<void> {
+    const config = await this.getById(id);
+    if (!config) throw new Error(`Configuration not found: ${id}`);
+    
+    // Export as Json
+    await this.fileService.writeJson(targetPath, config);
   }
 }

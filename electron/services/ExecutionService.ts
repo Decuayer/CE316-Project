@@ -5,7 +5,7 @@ import type {
   ProjectResults,
   StudentResult,
   DataSource,
-} from '@shared/types';
+} from '../../shared/types';
 import { FileService } from './FileService';
 
 const execFileAsync = promisify(execFile);

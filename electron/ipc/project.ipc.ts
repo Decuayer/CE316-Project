@@ -1,6 +1,7 @@
 import { IpcMain } from 'electron';
 import path from 'path';
 import { ProjectService } from '../services/ProjectService';
+import { DatabaseService } from '../services/DatabaseService';
 
 /**
  * Project IPC handlers - Task 5 [R3][R9][R10]
@@ -16,10 +17,10 @@ import { ProjectService } from '../services/ProjectService';
  *   project:getResults    - Load saved execution results               [R9][R10]
  *   project:getStatistics - Aggregate dashboard stats
  */
-export function registerProjectIpc(ipcMain: IpcMain, appDataDir: string): void {
+export function registerProjectIpc(ipcMain: IpcMain, dbService: DatabaseService, appDataDir: string): void {
   const projectsDir = path.join(appDataDir, 'projects');
   const configurationsDir = path.join(appDataDir, 'configurations');
-  const projectService = new ProjectService(projectsDir, configurationsDir);
+  const projectService = new ProjectService(dbService, projectsDir);
 
   // TODO [R10]: scan ~/.iae/projects/ and return every project manifest
   ipcMain.handle('project:getAll', async () => projectService.getAll());

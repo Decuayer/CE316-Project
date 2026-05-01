@@ -3,6 +3,7 @@ import path from 'path';
 import { ProjectService } from '../services/ProjectService';
 import { ZipService } from '../services/ZipService';
 import { ExecutionService } from '../services/ExecutionService';
+import { DatabaseService } from '../services/DatabaseService';
 
 /**
  * Execution IPC handlers - Task 8 [R6][R7][R8]
@@ -19,10 +20,10 @@ import { ExecutionService } from '../services/ExecutionService';
  * lifecycle of the execution:run promise. There is no separate progress
  * channel in v1 (see evaluation-flow-design.md "Run button states").
  */
-export function registerExecutionIpc(ipcMain: IpcMain, appDataDir: string): void {
+export function registerExecutionIpc(ipcMain: IpcMain, dbService: DatabaseService, appDataDir: string): void {
   const projectsDir = path.join(appDataDir, 'projects');
   const configurationsDir = path.join(appDataDir, 'configurations');
-  const projectService = new ProjectService(projectsDir, configurationsDir);
+  const projectService = new ProjectService(dbService, projectsDir);
   const zipService = new ZipService();
   const executionService = new ExecutionService();
 

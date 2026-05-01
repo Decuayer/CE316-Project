@@ -1,6 +1,7 @@
 import { IpcMain } from 'electron';
 import path from 'path';
 import { ConfigService } from '../services/ConfigService';
+import { DatabaseService } from '../services/DatabaseService';
 
 /**
  * Configuration IPC handlers - Task 4 [R3][R4][R5]
@@ -16,8 +17,8 @@ import { ConfigService } from '../services/ConfigService';
  *   config:import   - Import a .json config file           [R5]
  *   config:export   - Export a config as a .json file      [R5]
  */
-export function registerConfigIpc(ipcMain: IpcMain, appDataDir: string): void {
-  const configService = new ConfigService(path.join(appDataDir, 'configurations'));
+export function registerConfigIpc(ipcMain: IpcMain, dbService: DatabaseService): void {
+  const configService = new ConfigService(dbService);
 
   // TODO [R4]: list every configuration in ~/.iae/configurations/
   ipcMain.handle('config:getAll', async () => {

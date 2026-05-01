@@ -5,6 +5,9 @@ import { registerConfigIpc } from './ipc/config.ipc';
 import { registerProjectIpc } from './ipc/project.ipc';
 import { registerExecutionIpc } from './ipc/execution.ipc';
 import { FileService } from './services/FileService';
+import { DatabaseService } from './services/DatabaseService';
+import { ConfigService } from './services/ConfigService';
+import { ProjectService } from './services/ProjectService';
 
 const currentDirPath = path.dirname(fileURLToPath(import.meta.url));
 const APP_DATA_DIR = path.join(app.getPath('home'), '.iae');
@@ -16,6 +19,66 @@ async function createWindow() {
   const fileService = new FileService();
   await fileService.ensureDir(path.join(APP_DATA_DIR, 'configurations'));
   await fileService.ensureDir(path.join(APP_DATA_DIR, 'projects'));
+
+  // DatabaseService
+  const dbPath = path.join(APP_DATA_DIR, 'database.sqlite');
+  const dbService = new DatabaseService(dbPath);
+  console.log('DB Status: ', dbService.isConnected() ? 'Connected' : 'Error');
+
+  // ConfigService test 
+  setTimeout(async () => {
+    try {
+
+      const configService = new ConfigService(dbService);
+      
+      const newConfig = await configService.create({
+        name: "Test Python",
+        language: "python",
+        runCommand: "python3 {{sourceFile}}",
+        sourceFileExpected: "main.py"
+      });
+      console.log("ConfigService: Created ID:", newConfig.id);
+      
+      const configs = await configService.getAll();
+      console.log("ConfigService: All Configs:", configs);
+    } catch (error) {
+      console.error("ConfigService: Error occurred while testing:", error);
+    }
+  }, 2000);
+
+  // ProjectService test
+  setTimeout(async () => {
+    try {
+      const configService = new ConfigService(dbService);
+      const projectsDir = path.join(APP_DATA_DIR, 'projects');
+      const projectService = new ProjectService(dbService, projectsDir);
+
+      const testConfig = await configService.create({
+        name: "Test Config for Project",
+        language: "python",
+        runCommand: "python3 {{sourceFile}}",
+        sourceFileExpected: "main.py"
+      });
+
+      const newProject = await projectService.create({
+        name: "Test Project",
+        configurationId: testConfig.id,
+        input: { type: "text", value: "1 2 3" },
+        expectedOutput: { type: "text", value: "6" }
+      });
+      console.log("ProjectService: Project created with ID:", newProject.id);
+
+      const projects = await projectService.getAll();
+      console.log("ProjectService: All Projects:", projects.map(p => p.name));
+
+      const stats = await projectService.getStatistics();
+      console.log("ProjectService: Project Statistics:", stats);
+
+    } catch (error) {
+      console.error("ProjectService: Error occurred while testing:", error);
+    }
+  }, 3000);
+
 
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -35,9 +98,9 @@ async function createWindow() {
   });
 
   // Register IPC handlers
-  registerConfigIpc(ipcMain, APP_DATA_DIR);
-  registerProjectIpc(ipcMain, APP_DATA_DIR);
-  registerExecutionIpc(ipcMain, APP_DATA_DIR);
+  registerConfigIpc(ipcMain, dbService);
+  registerProjectIpc(ipcMain, dbService, APP_DATA_DIR);
+  registerExecutionIpc(ipcMain, dbService,APP_DATA_DIR);
 
   // Dialog IPC handlers
   ipcMain.handle('dialog:openDirectory', async () => {

@@ -141,3 +141,54 @@ export interface DashboardStats {
     lastRun: string | null;
   }>;
 }
+
+// --- Database ---
+
+export const DATABASE_SCHEMA = `
+  CREATE TABLE IF NOT EXISTS configurations (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    language TEXT NOT NULL,
+    compileCommand TEXT,
+    compileArgs TEXT,
+    runCommand TEXT NOT NULL,
+    runArgs TEXT,
+    sourceFileExpected TEXT NOT NULL,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS projects (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    configurationId TEXT NOT NULL,
+    input TEXT NOT NULL,  -- JSON
+    expectedOutput TEXT NOT NULL,  -- JSON
+    submissionsDir TEXT NOT NULL,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL,
+    FOREIGN KEY (configurationId) REFERENCES configurations(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS results (
+    projectId TEXT NOT NULL,
+    runAt TEXT NOT NULL,
+    studentId TEXT NOT NULL,
+    zipExtracted BOOLEAN NOT NULL,
+    sourceFound BOOLEAN NOT NULL,
+    compiled BOOLEAN NOT NULL,
+    compileOutput TEXT,
+    compileError TEXT,
+    executed BOOLEAN NOT NULL,
+    executionOutput TEXT,
+    executionError TEXT,
+    executionTimedOut BOOLEAN NOT NULL,
+    outputMatched BOOLEAN NOT NULL,
+    expectedOutput TEXT,
+    actualOutput TEXT,
+    status TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    PRIMARY KEY (projectId, studentId, runAt),
+    FOREIGN KEY (projectId) REFERENCES projects(id)
+  );
+`
