@@ -6,6 +6,7 @@ import type {
   StudentResult,
   DataSource,
 } from '@shared/types';
+import type { Database } from './Database';
 import { FileService } from './FileService';
 
 const execFileAsync = promisify(execFile);
@@ -29,21 +30,36 @@ const execFileAsync = promisify(execFile);
 export class ExecutionService {
   private fileService = new FileService();
 
+  constructor(private database: Database) {}
+
   /**
-   * runAll - process every student, sequentially.
+   * runAll - process every student, sequentially, persisting per-student
+   * results to the SQLite `student_results` table.
    *
    * TODO [R7][R8]:
-   *   1. Iterate every directory in project.submissionsDir (one student per dir).
-   *      Use FileService.listDirs to get the studentId list.
-   *   2. For each student: const result = await this.runStudent(studentDir, project)
-   *      then APPEND result to results/results.json IMMEDIATELY - so a process
+   *   1. const runAt = new Date().toISOString();
+   *   2. Wrap the whole batch in a transaction:
+   *        DELETE FROM student_results WHERE projectId = ?;
+   *        (so the project always reflects the LATEST run only - matches
+   *         the original results.json overwrite semantics)
+   *   3. List submissions: this.fileService.listDirs(project.submissionsDir).
+   *      Each entry is a studentId folder.
+   *   4. For each student:
+   *        const result = await this.runStudent(studentDir, project);
+   *        result.timestamp = new Date().toISOString();
+   *        INSERT INTO student_results (projectId, runAt, studentId,
+   *          zipExtracted, sourceFound, compiled, compileOutput, compileError,
+   *          executed, executionOutput, executionError, executionTimedOut,
+   *          outputMatched, expectedOutput, actualOutput, status, timestamp)
+   *        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+   *      Booleans are stored as INTEGER (0/1).
+   *      Persist EACH student immediately (commit per row) so a process
    *      crash mid-run does not lose previously-completed students.
-   *   3. Return the aggregated ProjectResults when the loop finishes.
-   *      Shape:
-   *        { projectId: project.id, runAt: ISO timestamp, students: StudentResult[] }
+   *   5. Return { projectId: project.id, runAt, students: [...] }.
    */
   async runAll(_project: Project): Promise<ProjectResults> {
     void this.fileService;
+    void this.database;
     void execFileAsync;
     throw new Error('Not implemented: ExecutionService.runAll');
   }

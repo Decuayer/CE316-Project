@@ -1,5 +1,3 @@
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
 import type {
   Project,
   ProjectResults,
@@ -7,71 +5,73 @@ import type {
   Configuration,
   DataSource,
 } from '@shared/types';
+import type { Database } from './Database';
 import { FileService } from './FileService';
 
 /**
  * ProjectService - Task 5 [R3][R10]
  *
- * Project lifecycle management.
+ * Project lifecycle management against the SQLite `projects` table.
  *
- * Each project lives in its own folder so the lecturer can open and save
- * projects at any time (R10). Folder layout:
+ * Schema (see electron/services/schema.ts, migration 1):
+ *   id                       TEXT PK
+ *   name                     TEXT NOT NULL
+ *   configurationId          TEXT NOT NULL
+ *   configurationSnapshot    TEXT NOT NULL  -- JSON.stringify of Configuration
+ *   inputType                TEXT NOT NULL  -- 'text' | 'file'
+ *   inputValue               TEXT NOT NULL  -- text content OR file path
+ *   expectedOutputType       TEXT NOT NULL  -- 'text' | 'file'
+ *   expectedOutputValue      TEXT NOT NULL  -- text content OR file path
+ *   submissionsDir           TEXT NOT NULL  -- on-disk path to extracted submissions
+ *   createdAt                TEXT NOT NULL
+ *   updatedAt                TEXT NOT NULL
  *
- *   ~/.iae/projects/<id>/
- *     project.json          - manifest                    [R10]
- *     submissions/<sid>/    - extracted student ZIPs      [R6]
- *     results/results.json  - last execution run output   [R9]
- *
- * Configurations are SNAPSHOTTED into the project at creation time
- * (project.configuration). Editing the source configuration later does
- * not change this project's behavior.
+ * `submissionsDir` lives on the filesystem (extracted ZIP contents are
+ * source files, NOT row data). Layout:
+ *   projectsRoot/<projectId>/submissions/<studentId>/<source files>
  */
 export class ProjectService {
   private fileService = new FileService();
 
   constructor(
-    private projectsDir: string,
-    private configurationsDir: string,
+    private database: Database,
+    private projectsRoot: string,
   ) {}
 
   /**
-   * TODO [R10]: list every subdirectory of projectsDir that contains
-   * project.json, parse each manifest, return Project[] sorted by
-   * updatedAt descending.
-   *  - Skip subdirectories without project.json (log a warning).
-   *  - Ensure projectsDir exists on first call.
+   * TODO [R10]: SELECT * FROM projects ORDER BY updatedAt DESC.
+   * For each row, JSON.parse(configurationSnapshot) into the configuration field
+   * and rebuild input/expectedOutput as DataSource discriminated unions:
+   *   { type: row.inputType, value/path: row.inputValue }.
    */
   async getAll(): Promise<Project[]> {
+    void this.database;
     void this.fileService;
-    void this.projectsDir;
     throw new Error('Not implemented: ProjectService.getAll');
   }
 
   /**
-   * TODO [R10]: read projectsDir/<id>/project.json and parse to Project.
-   * Return null if the manifest is missing.
+   * TODO [R10]: SELECT * FROM projects WHERE id = ?
+   * Return null if no row.
+   * Same row -> Project mapping as getAll.
    */
   async getById(_id: string): Promise<Project | null> {
     throw new Error('Not implemented: ProjectService.getById');
   }
 
   /**
-   * TODO [R3]: create the project skeleton.
-   *  1. Resolve configurationId -> read Configuration from configurationsDir.
-   *     Throw a clear error if the configuration is missing.
-   *  2. Generate a new uuid for the project.
-   *  3. Snapshot the configuration into the project (deep copy).
-   *  4. mkdir -p projectsDir/<id>/submissions
-   *  5. mkdir -p projectsDir/<id>/results
-   *  6. Build the manifest:
-   *       id, name, configurationId,
-   *       configuration: <snapshot>,
-   *       input: <DataSource>,
-   *       expectedOutput: <DataSource>,
-   *       submissionsDir: projectsDir/<id>/submissions,
-   *       createdAt, updatedAt
-   *  7. Write project.json with 2-space indentation.
-   *  8. Return the persisted Project.
+   * TODO [R3]:
+   *   1. Load the live Configuration via this.loadConfiguration(configurationId).
+   *      Throw if not found.
+   *   2. Generate uuid -> projectId.
+   *   3. Compute submissionsDir = path.join(projectsRoot, projectId, 'submissions').
+   *   4. mkdir -p submissionsDir (FileService.ensureDir).
+   *   5. INSERT INTO projects (...):
+   *      - configurationSnapshot = JSON.stringify(config)
+   *      - inputType / inputValue from data.input
+   *      - expectedOutputType / expectedOutputValue from data.expectedOutput
+   *      - createdAt = updatedAt = now
+   *   6. Return the persisted Project (re-construct via getById or build inline).
    */
   async create(_data: {
     name: string;
@@ -79,59 +79,58 @@ export class ProjectService {
     input: DataSource;
     expectedOutput: DataSource;
   }): Promise<Project> {
-    void path;
-    void uuidv4;
-    void this.configurationsDir;
+    void this.projectsRoot;
     throw new Error('Not implemented: ProjectService.create');
   }
 
   /**
-   * TODO [R10]: shallow-merge data onto the existing manifest.
-   *  - Allowed fields: name, input, expectedOutput, submissionsDir.
-   *  - Disallow: id, configurationId, configuration (snapshot is immutable).
-   *  - Bump updatedAt to now.
-   *  - Persist and return the updated Project.
+   * TODO [R10]: shallow-merge data onto the existing row.
+   *   Allowed fields: name, input, expectedOutput, submissionsDir.
+   *   Disallow: id, configurationId, configuration (snapshot is immutable).
+   *   UPDATE projects SET ... , updatedAt = ? WHERE id = ?.
    */
   async update(_id: string, _data: Partial<Project>): Promise<Project> {
     throw new Error('Not implemented: ProjectService.update');
   }
 
   /**
-   * TODO: rm -rf projectsDir/<id>/. No-op if missing.
-   * Removes the manifest, submissions, and results in one shot.
+   * TODO: DELETE FROM projects WHERE id = ?
+   *   ON DELETE CASCADE drops the student_results rows automatically.
+   *   Then rm -rf the on-disk submissions folder via FileService.deleteDir.
    */
   async delete(_id: string): Promise<void> {
     throw new Error('Not implemented: ProjectService.delete');
   }
 
   /**
-   * TODO [R9][R10]: read projectsDir/<id>/results/results.json.
-   * Return null if no run has happened yet.
+   * TODO [R9][R10]: load the latest run for the project.
+   *   1. SELECT MAX(runAt) AS latest FROM student_results WHERE projectId = ?
+   *      Return null if latest IS NULL (no run yet).
+   *   2. SELECT * FROM student_results
+   *      WHERE projectId = ? AND runAt = ? ORDER BY studentId.
+   *   3. Map rows to StudentResult (INTEGER 0/1 -> boolean; NULL -> undefined).
+   *   4. Return ProjectResults: { projectId, runAt: latest, students: [...] }.
    */
   async getResults(_id: string): Promise<ProjectResults | null> {
     throw new Error('Not implemented: ProjectService.getResults');
   }
 
   /**
-   * TODO: aggregate stats across every project for the Dashboard:
-   *   - totalProjects: count of projects
-   *   - totalStudents: sum of student counts across all results
-   *   - overallPassRate: weighted average pass rate
-   *   - recentProjects: 5 most recently updated, with status, counts,
-   *     pass rate, and lastRun timestamp
-   *
-   * "Status" is derived:
-   *   - completed: results.json exists and every student is processed
-   *   - in-progress: a partial results.json exists
-   *   - pending: no results.json yet
+   * TODO: aggregate stats across every project for the Dashboard.
+   *   - totalProjects: SELECT COUNT(*) FROM projects
+   *   - totalStudents: SELECT COUNT(DISTINCT projectId || ':' || studentId)
+   *                    FROM student_results r WHERE runAt = (latest per project)
+   *   - overallPassRate: SUM(status='pass') / COUNT(*) over latest runs
+   *   - recentProjects: top 5 by updatedAt with derived status
+   *       (completed | in-progress | pending) and pass rate from latest run.
    */
   async getStatistics(): Promise<DashboardStats> {
     throw new Error('Not implemented: ProjectService.getStatistics');
   }
 
   /**
-   * TODO: internal helper - load the live Configuration referenced by
-   * configurationId from configurationsDir. Used at create() time.
+   * TODO: SELECT * FROM configurations WHERE id = ?.
+   *   Throw a clear error if missing - used by create() to snapshot the config.
    */
   private async loadConfiguration(_configurationId: string): Promise<Configuration> {
     throw new Error('Not implemented: ProjectService.loadConfiguration');

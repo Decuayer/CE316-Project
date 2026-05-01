@@ -5,6 +5,7 @@ import { registerConfigIpc } from './ipc/config.ipc';
 import { registerProjectIpc } from './ipc/project.ipc';
 import { registerExecutionIpc } from './ipc/execution.ipc';
 import { FileService } from './services/FileService';
+import { Database } from './services/Database';
 
 const currentDirPath = path.dirname(fileURLToPath(import.meta.url));
 const APP_DATA_DIR = path.join(app.getPath('home'), '.iae');
@@ -12,10 +13,14 @@ const APP_DATA_DIR = path.join(app.getPath('home'), '.iae');
 let mainWindow: BrowserWindow | null = null;
 
 async function createWindow() {
-  // Ensure app data directories exist
+  // Ensure app data directories exist (submissions still live on disk)
   const fileService = new FileService();
-  await fileService.ensureDir(path.join(APP_DATA_DIR, 'configurations'));
-  await fileService.ensureDir(path.join(APP_DATA_DIR, 'projects'));
+  const projectsRoot = path.join(APP_DATA_DIR, 'projects');
+  await fileService.ensureDir(projectsRoot);
+
+  // Open the SQLite database (creates iae.db + runs migrations on first launch)
+  const database = new Database(path.join(APP_DATA_DIR, 'iae.db'));
+  app.on('before-quit', () => database.close());
 
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -35,9 +40,9 @@ async function createWindow() {
   });
 
   // Register IPC handlers
-  registerConfigIpc(ipcMain, APP_DATA_DIR);
-  registerProjectIpc(ipcMain, APP_DATA_DIR);
-  registerExecutionIpc(ipcMain, APP_DATA_DIR);
+  registerConfigIpc(ipcMain, database);
+  registerProjectIpc(ipcMain, database, projectsRoot);
+  registerExecutionIpc(ipcMain, database, projectsRoot);
 
   // Dialog IPC handlers
   ipcMain.handle('dialog:openDirectory', async () => {

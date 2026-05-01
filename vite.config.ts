@@ -15,7 +15,7 @@ export default defineConfig({
           build: {
             outDir: 'dist-electron',
             rollupOptions: {
-              external: ['electron', 'adm-zip'],
+              external: ['electron', 'adm-zip', 'better-sqlite3'],
             },
           },
           resolve: {
