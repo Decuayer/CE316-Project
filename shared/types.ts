@@ -23,6 +23,15 @@ export interface Configuration {
   updatedAt: string;
 }
 
+// --- DataSource [R7][R8] ---
+// Discriminated union: project input and expected output may be typed text
+// OR sourced from a file on disk.
+// See docs/superpowers/specs/2026-04-29-evaluation-flow-design.md
+// ("Data model refinements") for the rationale.
+export type DataSource =
+  | { type: 'text'; value: string }
+  | { type: 'file'; path: string };
+
 // --- Project [R3][R10] ---
 
 export interface Project {
@@ -31,8 +40,10 @@ export interface Project {
   configurationId: string;         // Reference to configuration [R3]
   configuration: Configuration;    // Snapshot of config at project creation [R3]
 
-  expectedOutput: string;          // The correct output to compare against [R8]
-  programArgs: string;             // Arguments to pass to student programs [R7]
+  // Per evaluation-flow-design.md: argv source and expected output are both
+  // DataSource, supporting typed-text and file-path modes symmetrically.
+  input: DataSource;               // [R7] argv source - replaces programArgs
+  expectedOutput: DataSource;      // [R8] expected output - replaces string
 
   submissionsDir: string;          // Path to extracted submissions [R6]
 
@@ -95,7 +106,7 @@ export interface IpcChannels {
   // Project operations [R3][R10]
   'project:getAll': () => Promise<Project[]>;
   'project:getById': (id: string) => Promise<Project | null>;
-  'project:create': (data: { name: string; configurationId: string; expectedOutput: string; programArgs: string }) => Promise<Project>;
+  'project:create': (data: { name: string; configurationId: string; input: DataSource; expectedOutput: DataSource }) => Promise<Project>;
   'project:update': (id: string, data: Partial<Project>) => Promise<Project>;
   'project:delete': (id: string) => Promise<void>;
   'project:getResults': (id: string) => Promise<ProjectResults | null>;
@@ -104,6 +115,9 @@ export interface IpcChannels {
   // Execution operations [R6][R7][R8]
   'execution:importZips': (projectId: string, dirPath: string) => Promise<string[]>;
   'execution:run': (projectId: string) => Promise<ProjectResults>;
+  // execution:cleanup - "Clean up artifacts" button on Project Detail
+  // (see evaluation-flow-design.md "Clean up artifacts button")
+  'execution:cleanup': (projectId: string) => Promise<void>;
   'execution:getStudents': (projectId: string) => Promise<string[]>;
 
   // Dialog operations

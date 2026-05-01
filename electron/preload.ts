@@ -31,6 +31,9 @@ const api = {
     importZips: (projectId: string, dirPath: string) =>
       ipcRenderer.invoke('execution:importZips', projectId, dirPath),
     run: (projectId: string) => ipcRenderer.invoke('execution:run', projectId),
+    // Removes everything under each student folder that is NOT the source file.
+    // See evaluation-flow-design.md "Clean up artifacts button".
+    cleanup: (projectId: string) => ipcRenderer.invoke('execution:cleanup', projectId),
     getStudents: (projectId: string) =>
       ipcRenderer.invoke('execution:getStudents', projectId),
   },
