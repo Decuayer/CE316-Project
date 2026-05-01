@@ -167,7 +167,7 @@ export const DATABASE_SCHEMA = `
     submissionsDir TEXT NOT NULL,
     createdAt TEXT NOT NULL,
     updatedAt TEXT NOT NULL,
-    FOREIGN KEY (configurationId) REFERENCES configurations(id)
+    FOREIGN KEY (configurationId) REFERENCES configurations(id) ON DELETE RESTRICT
   );
 
   CREATE TABLE IF NOT EXISTS results (
@@ -189,6 +189,6 @@ export const DATABASE_SCHEMA = `
     status TEXT NOT NULL,
     timestamp TEXT NOT NULL,
     PRIMARY KEY (projectId, studentId, runAt),
-    FOREIGN KEY (projectId) REFERENCES projects(id)
+    FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
   );
 `

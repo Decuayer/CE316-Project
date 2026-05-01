@@ -25,7 +25,7 @@ async function createWindow() {
   const dbService = new DatabaseService(dbPath);
   console.log('DB Status: ', dbService.isConnected() ? 'Connected' : 'Error');
 
-  // ConfigService test 
+  /* ConfigService test 
   setTimeout(async () => {
     try {
 
@@ -45,8 +45,9 @@ async function createWindow() {
       console.error("ConfigService: Error occurred while testing:", error);
     }
   }, 2000);
+  */
 
-  // ProjectService test
+  /* ProjectService test
   setTimeout(async () => {
     try {
       const configService = new ConfigService(dbService);
@@ -78,6 +79,7 @@ async function createWindow() {
       console.error("ProjectService: Error occurred while testing:", error);
     }
   }, 3000);
+  */
 
 
   mainWindow = new BrowserWindow({
