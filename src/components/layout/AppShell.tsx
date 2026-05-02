@@ -1,68 +1,196 @@
-import React from 'react';
-import { BarChart3, CircleHelp, FolderKanban, GraduationCap, Settings2 } from 'lucide-react';
+import * as React from 'react';
 import { NavLink } from 'react-router-dom';
 
-import { cn } from '@/lib/utils';
+import { Icon, type IconName } from '@/components/shared/Icon';
 
-const navigationItems = [
-  { label: 'Dashboard', path: '/', icon: BarChart3, end: true },
-  { label: 'Projects', path: '/projects', icon: FolderKanban },
-  { label: 'Configurations', path: '/configurations', icon: Settings2 },
-  { label: 'Help', path: '/help', icon: CircleHelp },
+interface NavItem {
+  to: string;
+  end?: boolean;
+  icon: IconName;
+  label: string;
+}
+
+const mainNav: NavItem[] = [
+  { to: '/', end: true, icon: 'dashboard', label: 'Dashboard' },
+  { to: '/projects', icon: 'projects', label: 'Projects' },
+  { to: '/configurations', icon: 'config', label: 'Configurations' },
+  { to: '/results', icon: 'results', label: 'Results' },
 ];
+
+const supportNav: NavItem[] = [{ to: '/help', icon: 'help', label: 'Help' }];
+
+const sectionLabel: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 700,
+  textTransform: 'uppercase',
+  letterSpacing: '0.08em',
+  color: 'var(--text-muted)',
+  padding: '16px 12px 6px',
+};
+
+function navItemStyle(active: boolean): React.CSSProperties {
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: '9px 12px',
+    borderRadius: 8,
+    cursor: 'pointer',
+    fontSize: 14,
+    fontWeight: active ? 600 : 500,
+    color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+    background: active ? 'var(--bg-hover)' : 'transparent',
+    transition: 'all 0.15s',
+    border: 'none',
+    width: '100%',
+    textAlign: 'left',
+    fontFamily: 'inherit',
+    textDecoration: 'none',
+  };
+}
+
+function NavItemLink({ item }: { item: NavItem }) {
+  return (
+    <NavLink to={item.to} end={item.end} style={{ textDecoration: 'none' }}>
+      {({ isActive }) => (
+        <div
+          style={navItemStyle(isActive)}
+          onMouseEnter={(e) => {
+            if (!isActive) {
+              e.currentTarget.style.background = 'var(--bg-hover)';
+              e.currentTarget.style.color = 'var(--text-primary)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isActive) {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+            }
+          }}
+        >
+          <Icon name={item.icon} size={18} /> {item.label}
+        </div>
+      )}
+    </NavLink>
+  );
+}
+
+function Sidebar() {
+  return (
+    <aside
+      style={{
+        width: 'var(--sidebar-w)',
+        minWidth: 'var(--sidebar-w)',
+        height: '100vh',
+        background: 'var(--bg-secondary)',
+        borderRight: '1px solid var(--border)',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 0,
+        transition: 'width 0.2s',
+      }}
+    >
+      <div
+        className="drag-region"
+        style={{
+          padding: '44px 20px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          borderBottom: '1px solid var(--border)',
+        }}
+      >
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            background: 'linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <Icon name="terminal" size={18} color="#fff" />
+        </div>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: '-0.02em' }}>IAE</div>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>
+            Assignment Environment
+          </div>
+        </div>
+      </div>
+
+      <nav
+        className="no-drag"
+        style={{
+          flex: 1,
+          padding: '12px 8px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+          overflowY: 'auto',
+        }}
+        aria-label="Main navigation"
+      >
+        <div style={sectionLabel}>Main</div>
+        {mainNav.map((item) => (
+          <NavItemLink key={item.to} item={item} />
+        ))}
+        <div style={sectionLabel}>Support</div>
+        {supportNav.map((item) => (
+          <NavItemLink key={item.to} item={item} />
+        ))}
+      </nav>
+
+      <div
+        style={{
+          padding: '12px 16px',
+          borderTop: '1px solid var(--border)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+        }}
+      >
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: '50%',
+            background: 'var(--bg-hover)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 13,
+            fontWeight: 700,
+            color: 'var(--accent)',
+          }}
+        >
+          L
+        </div>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600 }}>Lecturer</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>CE 316</div>
+        </div>
+      </div>
+    </aside>
+  );
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
-      <aside className="flex w-72 shrink-0 flex-col border-r border-border bg-card/70">
-        <div className="drag-region flex h-20 items-center gap-3 border-b border-border px-5">
-          <div className="flex size-11 items-center justify-center rounded-lg border border-cyan-400/20 bg-cyan-400/10 text-cyan-200">
-            <GraduationCap className="size-5" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold leading-5">CE316 IAE</p>
-            <p className="truncate text-xs text-muted-foreground">Assignment evaluation</p>
-          </div>
-        </div>
-
-        <nav className="flex-1 space-y-1 p-3" aria-label="Main navigation">
-          {navigationItems.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                end={item.end}
-                className={({ isActive }) =>
-                  cn(
-                    'flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                    isActive
-                      ? 'bg-accent text-accent-foreground'
-                      : 'hover:bg-secondary hover:text-foreground',
-                  )
-                }
-              >
-                <Icon className="size-4" aria-hidden="true" />
-                <span>{item.label}</span>
-              </NavLink>
-            );
-          })}
-        </nav>
-
-        <div className="border-t border-border p-4">
-          <div className="rounded-lg border border-border bg-background/40 p-3">
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Workspace</p>
-            <p className="mt-2 text-sm font-medium">Local desktop mode</p>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">Project files and results stay on this machine.</p>
-          </div>
-        </div>
-      </aside>
-
-      <main className="flex-1 overflow-auto">
-        <div className="mx-auto min-h-full w-full max-w-7xl px-6 py-6 lg:px-8">
-          {children}
-        </div>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+      <Sidebar />
+      <main
+        style={{
+          flex: 1,
+          overflow: 'auto',
+          padding: 32,
+          background: 'var(--bg-primary)',
+        }}
+      >
+        {children}
       </main>
     </div>
   );
