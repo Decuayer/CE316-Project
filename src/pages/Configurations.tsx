@@ -1,50 +1,166 @@
-/**
- * Configurations Page - Task 12 [R4][R5]
- *
- * Lists every saved language configuration and lets the lecturer create,
- * edit, delete, import, or export them.
- *
- * UI inventory (see iae-design.md "UI Design > Configurations"):
- *   - Header with "New Configuration" primary button             [R4]
- *   - Toolbar: "Import" + "Export selected" buttons              [R5]
- *   - Card grid (or table) of every Configuration showing:
- *       name, language, sourceFileExpected, createdAt
- *   - Per-row actions: Edit [R4], Export [R5], Delete [R4]
- *   - Create / Edit modal with fields:
- *       name, language,
- *       compileCommand (optional), compileArgs (optional),
- *       runCommand, runArgs (optional),
- *       sourceFileExpected
- *     and a hint listing the available template variables:
- *       {{sourceFile}}, {{outputName}}, {{args}}
- *   - Confirmation modal on Delete (warn that snapshotted projects are unaffected)
- *
- * Data flow:
- *   onMount   -> ipc.config.getAll()
- *   onCreate  -> ipc.config.create()  -> reload
- *   onUpdate  -> ipc.config.update()  -> reload
- *   onDelete  -> confirm -> ipc.config.delete() -> reload
- *   onImport  -> ipc.dialog.openFile([{ name: 'JSON', extensions: ['json'] }])
- *             -> ipc.config.import(filePath) -> reload
- *   onExport  -> ipc.dialog.saveFile(`${config.name}.json`, ...)
- *             -> ipc.config.export(id, targetPath)
- */
-export default function Configurations() {
-  // TODO [R4]: useState<Configuration[]>([]) + useEffect(loadAll)
-  // TODO [R4]: modal state for create/edit (selectedConfigId, formValues)
-  // TODO [R4]: render header with "New Configuration" button
-  // TODO [R5]: render toolbar with Import + Export-selected buttons
-  // TODO [R4]: render the grid/table with per-row Edit/Export/Delete
-  // TODO [R4]: render the create/edit modal with the template-variable hint
-  // TODO [R4]: render the delete-confirmation modal
+import { Icon } from '@/components/shared/Icon';
+import { LangDot } from '@/components/shared/LangDot';
+import { cardStyle } from '@/components/shared/StatCard';
+import { CONFIGS } from '@/lib/mockData';
 
+export default function Configurations() {
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">Configurations</h1>
-      <p className="text-muted-foreground">
-        Configuration management UI is scaffolded. See the TODOs at the top of
-        this file (Task 12 in the implementation plan) for the work remaining.
-      </p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.03em' }}>Configurations</h1>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '10px 18px',
+              borderRadius: 10,
+              border: '1px solid var(--border)',
+              background: 'var(--bg-tertiary)',
+              color: 'var(--text-primary)',
+              fontWeight: 600,
+              fontSize: 13,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            <Icon name="upload" size={16} /> Import JSON
+          </button>
+          <button
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '10px 18px',
+              borderRadius: 10,
+              border: 'none',
+              background: 'var(--accent)',
+              color: '#fff',
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            <Icon name="plus" size={16} color="#fff" /> New Config
+          </button>
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+          gap: 16,
+        }}
+      >
+        {CONFIGS.map((c) => (
+          <div
+            key={c.id}
+            style={{ ...cardStyle, cursor: 'pointer' }}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--border-light)')}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <LangDot lang={c.language} />
+              <span style={{ fontSize: 15, fontWeight: 700, flex: 1 }}>{c.name}</span>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: '3px 10px',
+                  borderRadius: 20,
+                  background: 'var(--bg-hover)',
+                  color: 'var(--text-secondary)',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {c.language}
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {c.compileCommand && (
+                <div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: 'var(--text-muted)',
+                      textTransform: 'uppercase',
+                      marginBottom: 3,
+                    }}
+                  >
+                    Compile
+                  </div>
+                  <code
+                    style={{
+                      fontSize: 12,
+                      color: 'var(--accent)',
+                      background: 'var(--accent-dim)',
+                      padding: '4px 8px',
+                      borderRadius: 4,
+                      display: 'block',
+                    }}
+                  >
+                    {c.compileCommand}
+                  </code>
+                </div>
+              )}
+              <div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: 'var(--text-muted)',
+                    textTransform: 'uppercase',
+                    marginBottom: 3,
+                  }}
+                >
+                  Run
+                </div>
+                <code
+                  style={{
+                    fontSize: 12,
+                    color: 'var(--green)',
+                    background: 'var(--green-dim)',
+                    padding: '4px 8px',
+                    borderRadius: 4,
+                    display: 'block',
+                  }}
+                >
+                  {c.runCommand}
+                </code>
+              </div>
+              <div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: 'var(--text-muted)',
+                    textTransform: 'uppercase',
+                    marginBottom: 3,
+                  }}
+                >
+                  Source File
+                </div>
+                <code
+                  style={{
+                    fontSize: 12,
+                    color: 'var(--text-secondary)',
+                    padding: '4px 8px',
+                    borderRadius: 4,
+                    display: 'block',
+                    background: 'var(--bg-hover)',
+                  }}
+                >
+                  {c.sourceFileExpected}
+                </code>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

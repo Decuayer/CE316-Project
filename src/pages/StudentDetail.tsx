@@ -1,57 +1,139 @@
-/**
- * Student Detail Page - Task 15 [R9]
- *
- * Detailed execution log for a single student plus a side-by-side diff.
- *
- * UI inventory (see iae-design.md "UI Design > Student Detail" and
- * evaluation-flow-design.md "Comparison and diff UI"):
- *
- *   - Header: studentId, status pill, timestamp, link back to Results
- *   - Pipeline timeline:
- *       ZIP extracted? -> source found? -> compiled? -> executed?
- *       -> output matched?
- *     Each step shows ok/failed with the recorded message.
- *   - Compile output panel (stdout + stderr)             [R7]
- *   - Run output panel (stdout + stderr)                 [R7]
- *   - Side-by-side diff [R8]:
- *       expected (left) vs actual (right)
- *       toggle "Show whitespace markers" (default ON) renders:
- *         space  -> -
- *         tab    -> ->
- *         CR     -> CR-glyph
- *         LF     -> LF-glyph + actual newline (so layout is preserved)
- *         CRLF   -> CR-glyph + LF-glyph + actual newline
- *       line-by-line: differing lines highlighted red,
- *                     matching lines in default color
- *
- * Why the whitespace toggle? The comparator is strict (===). When a run
- * fails because the program emits "\n" but the lecturer pasted "\r\n"
- * into the expected field, the markers make the failure obvious instead
- * of mysterious.
- *
- * Data flow:
- *   onMount -> ipc.project.getResults(projectId)
- *           -> students.find(s => s.studentId === studentId)
- *           -> render. If missing, show "no results yet" empty state.
- */
+import { useNavigate, useParams } from 'react-router-dom';
+
+import { Icon } from '@/components/shared/Icon';
+import { StatusBadge } from '@/components/shared/StatusBadge';
+import { cardStyle } from '@/components/shared/StatCard';
+import { PROJECTS, RESULTS, type ResultStatus } from '@/lib/mockData';
+
+interface StepDef {
+  label: string;
+  failingStatuses: ResultStatus[];
+  matchedSensitive?: boolean;
+}
+
+const steps: StepDef[] = [
+  { label: 'Extracted', failingStatuses: [] },
+  { label: 'Compiled', failingStatuses: ['COMPILE_ERROR'] },
+  { label: 'Executed', failingStatuses: ['COMPILE_ERROR', 'RUNTIME_ERROR', 'TIMEOUT'] },
+  { label: 'Matched', failingStatuses: ['COMPILE_ERROR', 'RUNTIME_ERROR', 'TIMEOUT'], matchedSensitive: true },
+];
+
 export default function StudentDetail() {
-  // TODO: const { id, studentId } = useParams<{ id: string; studentId: string }>()
-  // TODO: load ProjectResults via ipc.project.getResults(id)
-  // TODO: pluck the matching StudentResult by studentId; render empty state if missing
-  // TODO [R9]: render header with status pill + timestamp + back link
-  // TODO [R9]: render pipeline timeline (ZIP -> source -> compile -> run -> match)
-  // TODO [R7]: render compile/run output panels (stdout + stderr)
-  // TODO [R8]: render side-by-side diff with whitespace-marker toggle
-  // TODO [R8]: implement diff line highlighting (red for diff, default for match)
+  const { id, studentId } = useParams<{ id: string; studentId: string }>();
+  const navigate = useNavigate();
+
+  const project = PROJECTS.find((p) => p.id === id);
+  const result = RESULTS.find((r) => r.projectId === id && r.studentId === studentId);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">Student Detail</h1>
-      <p className="text-muted-foreground">
-        Student detail view is scaffolded. See the TODOs (Task 15) for the
-        pipeline timeline, compile/run output panels, and the side-by-side
-        diff with whitespace-marker toggle.
-      </p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button
+          onClick={() => (id ? navigate(`/projects/${id}`) : navigate('/projects'))}
+          style={{
+            background: 'var(--bg-hover)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            padding: '6px 10px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          <Icon name="chevronLeft" size={16} />
+        </button>
+        <div style={{ flex: 1 }}>
+          <h1
+            style={{
+              fontSize: 22,
+              fontWeight: 800,
+              letterSpacing: '-0.02em',
+              fontFamily: "'JetBrains Mono', monospace",
+            }}
+          >
+            {studentId}
+          </h1>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
+            {project?.name ?? 'Unknown project'}
+          </div>
+        </div>
+        {result && <StatusBadge status={result.status} />}
+      </div>
+
+      <div style={cardStyle}>
+        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Pipeline</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+          {steps.map((step, i) => {
+            const ok = result
+              ? step.matchedSensitive
+                ? result.outputMatched === 1 && !step.failingStatuses.includes(result.status)
+                : !step.failingStatuses.includes(result.status)
+              : false;
+            return (
+              <div
+                key={step.label}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 0 }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 8,
+                    flex: 1,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 12,
+                      background: ok ? 'var(--green-dim)' : 'var(--red-dim)',
+                      border: `2px solid ${ok ? 'var(--green)' : 'var(--red)'}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Icon
+                      name={ok ? 'check' : 'x'}
+                      size={16}
+                      color={ok ? 'var(--green)' : 'var(--red)'}
+                    />
+                  </div>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
+                    {step.label}
+                  </span>
+                </div>
+                {i < steps.length - 1 && (
+                  <div
+                    style={{
+                      width: 40,
+                      height: 2,
+                      background: 'var(--border)',
+                      borderRadius: 1,
+                      marginBottom: 24,
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {!result && (
+        <div style={{ ...cardStyle, color: 'var(--text-secondary)' }}>
+          No result found for this student. Run the evaluation pipeline first.
+        </div>
+      )}
     </div>
   );
 }
