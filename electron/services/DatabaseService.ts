@@ -1,49 +1,69 @@
-    import Database from "better-sqlite3";
-    import { DATABASE_SCHEMA } from "../../shared/types";
+import Database from "better-sqlite3";
+import { DATABASE_SCHEMA } from "../../shared/types";
 
-    export class DatabaseService {
-        private db: Database.Database;
+/**
+ * DatabaseService
+ *
+ * Manages the SQLite database connection, initialization, and schema creation
+ * using better-sqlite3.
+ */
+export class DatabaseService {
+    private db: Database.Database;
 
-        constructor(dbPath: string) {
-            try {
-                this.db = new Database(dbPath);
-                this.db.pragma('journal_mode = WAL');
-                this.db.pragma('foreign_keys = ON');
-
-                this.initDatabase();
-                console.log(`Database initialized successfully: ${dbPath}`);
-            } catch (error) {
-                console.error('Error initializing database: ', error);
-                throw error;
-            }
-        }
-
-        private initDatabase() {
-            try {
-                this.db.exec(DATABASE_SCHEMA);
-            } catch(error) {
-                console.error('Error creating database schema: ', error);
-                throw error;
-            }
-            
-        }
-
-        public getDb() : Database.Database {
-            if (!this.isConnected()) {
-                throw new Error('Database connection is not open');
-            }       
-            return this.db;
-        }
-
-        public isConnected(): boolean {
-            return this.db!== undefined && this.db.open;
-        }
-
-        public close() {
-            if (this.isConnected()) {
-                this.db.close();
-                console.log('Database connection closed');
-            }
+    /**
+     * Initializes the database connection, sets pragmas, and applies the schema.
+     */
+    constructor(dbPath: string) {
+        try {
+            this.db = new Database(dbPath);
+            this.db.pragma('journal_mode = WAL');
+            this.db.pragma('foreign_keys = ON');
+            this.initDatabase();
+            console.log(`Database initialized successfully: ${dbPath}`);
+        } catch (error) {
+            console.error('Error initializing database: ', error);
+            throw error;
         }
     }
+
+    /**
+     * Executes the initial database schema creation.
+     */
+    private initDatabase() {
+        try {
+            this.db.exec(DATABASE_SCHEMA);
+        } catch(error) {
+            console.error('Error creating database schema: ', error);
+            throw error;
+        }
+        
+    }
+
+    /**
+     * Returns the active database instance. Throws an error if not connected.
+     */
+    public getDb() : Database.Database {
+        if (!this.isConnected()) {
+            throw new Error('Database connection is not open');
+        }       
+        return this.db;
+    }
+
+    /**
+     * Checks if the database connection is currently open.
+     */
+    public isConnected(): boolean {
+        return this.db!== undefined && this.db.open;
+    }
+
+    /**
+     * Closes the active database connection.
+     */
+    public close() {
+        if (this.isConnected()) {
+            this.db.close();
+            console.log('Database connection closed');
+        }
+    }
+}
 
