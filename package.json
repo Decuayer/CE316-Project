@@ -5,6 +5,7 @@
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
+    "predev": "npm run rebuild:electron",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
