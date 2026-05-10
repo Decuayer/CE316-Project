@@ -18,7 +18,7 @@ import { DatabaseService } from '../services/DatabaseService';
  *   config:export   - Export a config as a .json file      [R5]
  */
 
-// TODO: ALİ EMRE AÇIKKOL
+// TODO: EGE AYYILDIZ [ConfigService Modülü]
 // Tüm IPC handler'lara try-catch error handling ekle.
 // Hata durumunda renderer'a anlamlı hata mesajları ilet.
 // Örnek pattern:
@@ -43,7 +43,7 @@ export function registerConfigIpc(ipcMain: IpcMain, dbService: DatabaseService):
     return configService.update(id, data);
   });
 
-  // TODO: ALİ EMRE AÇIKKOL
+  // TODO: EGE AYYILDIZ [ConfigService Modülü]
   // config:delete - Silmeden önce bu config'i kullanan proje var mı kontrol et.
   // Varsa kullanıcıya uyarı mesajı döndür (FOREIGN KEY RESTRICT zaten engelleyecek ama
   // kullanıcıya anlamlı hata mesajı vermek gerekiyor).

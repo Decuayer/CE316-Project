@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Icon } from '@/components/shared/Icon';
 import { LangDot } from '@/components/shared/LangDot';
 import { cardStyle } from '@/components/shared/StatCard';
-// TODO: EGE AYYILDIZ
+// TODO: ALİ EMRE AÇIKKOL [ProjectService Modülü]
 // 1. Mock data import'unu kaldır ve gerçek IPC kullan:
 //    import { ipc } from '@/lib/ipc';
 //    import type { Project } from '@shared/types';
@@ -20,7 +20,7 @@ import { PROJECTS } from '@/lib/mockData';
 export default function Projects() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  // TODO: EGE AYYILDIZ
+  // TODO: ALİ EMRE AÇIKKOL [ProjectService Modülü]
   // const [projects, setProjects] = useState<Project[]>([]);
   // const [loading, setLoading] = useState(true);
   // filtered'ı projects state'inden hesapla

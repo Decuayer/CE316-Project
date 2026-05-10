@@ -31,7 +31,7 @@ const execFileAsync = promisify(execFile);
 export class ExecutionService {
   private fileService = new FileService();
 
-  // TODO: EGE ÇAĞAN KANTAR
+  // TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü]
   // runAll(): Tüm öğrencileri sırayla işle.
   // 1. project.submissionsDir altındaki tüm alt klasörleri listele (FileService.listDirs)
   //    Her klasör adı = studentId
@@ -48,7 +48,7 @@ export class ExecutionService {
     throw new Error('Not implemented: ExecutionService.runAll');
   }
 
-  // TODO: EGE ÇAĞAN KANTAR
+  // TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü]
   // runStudent(): Tek bir öğrencinin compile -> run -> compare pipeline'ını çalıştır.
   // ÖNEMLİ: Bu metod ASLA throw etmemeli. Tüm hatalar StudentResult'a kaydedilmeli.
   //
@@ -76,7 +76,7 @@ export class ExecutionService {
     throw new Error('Not implemented: ExecutionService.runStudent');
   }
 
-  // TODO: EGE ÇAĞAN KANTAR
+  // TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü]
   // cleanupArtifacts(): Her öğrenci klasöründeki gereksiz dosyaları sil.
   // 1. project.submissionsDir altındaki tüm öğrenci klasörlerini listele
   // 2. Her klasörde: configuration.sourceFileExpected HARİÇ tüm dosyaları sil
@@ -88,7 +88,7 @@ export class ExecutionService {
 
   // -------------- internal helpers --------------
 
-  // TODO: EGE ÇAĞAN KANTAR
+  // TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü]
   // buildArgv(): Template değişkenlerini yerine koy ve argv dizisi oluştur.
   // 1. template undefined veya boşsa [] döndür
   // 2. Template'i whitespace'e göre split et -> token dizisi
@@ -105,7 +105,7 @@ export class ExecutionService {
     throw new Error('Not implemented: ExecutionService.buildArgv');
   }
 
-  // TODO: EGE ÇAĞAN KANTAR
+  // TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü]
   // resolveDataSource(): DataSource'u string içeriğe çevir.
   // - type === 'text': doğrudan source.value döndür
   // - type === 'file': fs.readFile(source.path, 'utf-8') ile oku ve döndür
@@ -114,7 +114,7 @@ export class ExecutionService {
     throw new Error('Not implemented: ExecutionService.resolveDataSource');
   }
 
-  // TODO: EGE ÇAĞAN KANTAR
+  // TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü]
   // parseInputToArgv(): Input string'ini argv elemanlarına ayır.
   // 1. '\n' ile split et
   // 2. Her satırdan sondaki '\r' karakterini temizle

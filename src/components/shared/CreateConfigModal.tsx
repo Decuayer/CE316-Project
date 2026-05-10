@@ -1,4 +1,4 @@
-// TODO: GÖRKE GÖYNÜGÜR
+// TODO: EGE AYYILDIZ [ConfigService Modülü]
 // CreateConfigModal: Yeni konfigürasyon oluşturma ve düzenleme modalı.
 //
 // Props:

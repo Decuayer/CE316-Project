@@ -2,9 +2,13 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 // Expose typed IPC methods to the renderer process via contextBridge
 // This is the secure bridge between main and renderer processes
-// TODO: ALİ EMRE AÇIKKOL
-// IPC çağrılarında hata yönetimi ekle.
-// Her invoke çağrısını try-catch ile sar ve hata mesajlarını renderer'a temiz şekilde ilet.
+//
+// Error handling sorumlulukları (modül bazlı):
+// TODO: EGE AYYILDIZ [ConfigService Modülü] — config.* çağrılarına try-catch ekle
+// TODO: ALİ EMRE AÇIKKOL [ProjectService Modülü] — project.* çağrılarına try-catch ekle
+// TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü] — execution.run/cleanup çağrılarına try-catch ekle
+// TODO: GÖRKE GÖYNÜGÜR [ZipService Modülü] — execution.importZips/getStudents çağrılarına try-catch ekle
+//
 // Örnek pattern:
 //   getAll: async () => {
 //     try { return await ipcRenderer.invoke('config:getAll'); }

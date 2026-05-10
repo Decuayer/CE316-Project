@@ -89,7 +89,7 @@ export class FileService {
     return entries.filter(e => e.isDirectory()).map(e => e.name);
   }
 
-  // TODO: EGE ÇAĞAN KANTAR
+  // TODO: DEMİR CÜCÜ [FileService + Infra Modülü]
   // readFile(): Dosya içeriğini string olarak oku.
   // ExecutionService.resolveDataSource() metodu bu fonksiyona ihtiyaç duyuyor.
   // fs.readFile(filePath, 'utf-8') kullanarak implement et.

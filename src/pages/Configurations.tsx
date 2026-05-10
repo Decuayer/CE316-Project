@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Icon } from '@/components/shared/Icon';
 import { LangDot } from '@/components/shared/LangDot';
 import { cardStyle } from '@/components/shared/StatCard';
-// TODO: EGE AYYILDIZ
+// TODO: EGE AYYILDIZ [ConfigService Modülü]
 // 1. Mock data import'unu kaldır ve gerçek IPC kullan:
 //    import { ipc } from '@/lib/ipc';
 //    import type { Configuration } from '@shared/types';

@@ -12,7 +12,7 @@ const APP_DATA_DIR = path.join(app.getPath('home'), '.iae');
 
 let mainWindow: BrowserWindow | null = null;
 
-// TODO: DEMİR CÜCÜ
+// TODO: DEMİR CÜCÜ [FileService + Infra Modülü]
 // dbService referansını modül seviyesinde tut ki app quit event'inde close() çağrılabilsin.
 let dbService: DatabaseService | null = null;
 
@@ -100,7 +100,7 @@ app.on('activate', () => {
   }
 });
 
-// TODO: DEMİR CÜCÜ
+// TODO: DEMİR CÜCÜ [FileService + Infra Modülü]
 // Uygulama kapanmadan önce veritabanı bağlantısını temiz şekilde kapat.
 // Bu event handler'ı ekle:
 app.on('before-quit', () => {

@@ -27,7 +27,7 @@ export function registerExecutionIpc(ipcMain: IpcMain, dbService: DatabaseServic
   const zipService = new ZipService();
   const executionService = new ExecutionService();
 
-  // TODO: ALİ EMRE AÇIKKOL
+  // TODO: GÖRKE GÖYNÜGÜR [ZipService Modülü]
   // execution:importZips handler'ına try-catch error handling ekle.
   // Hata durumunda açıklayıcı mesaj döndür (örn: "ZIP dizini bulunamadı").
   ipcMain.handle('execution:importZips', async (_e, projectId: string, dirPath: string) => {
@@ -36,7 +36,7 @@ export function registerExecutionIpc(ipcMain: IpcMain, dbService: DatabaseServic
     return zipService.extractAll(dirPath, project.submissionsDir);
   });
 
-  // TODO: ALİ EMRE AÇIKKOL
+  // TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü]
   // execution:run handler'ını güncelle:
   // 1. executionService.runAll(project) çağrıldıktan sonra dönen ProjectResults'ı DB'ye kaydet.
   // 2. Her StudentResult'ı results tablosuna INSERT et:
@@ -53,7 +53,7 @@ export function registerExecutionIpc(ipcMain: IpcMain, dbService: DatabaseServic
     return executionService.runAll(project);
   });
 
-  // TODO: ALİ EMRE AÇIKKOL
+  // TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü]
   // execution:cleanup handler'ına try-catch ekle.
   // Hata mesajını renderer'a ilet.
   ipcMain.handle('execution:cleanup', async (_e, projectId: string) => {
@@ -62,7 +62,7 @@ export function registerExecutionIpc(ipcMain: IpcMain, dbService: DatabaseServic
     return executionService.cleanupArtifacts(project);
   });
 
-  // TODO: ALİ EMRE AÇIKKOL
+  // TODO: GÖRKE GÖYNÜGÜR [ZipService Modülü]
   // execution:getStudents handler'ına try-catch ekle.
   ipcMain.handle('execution:getStudents', async (_e, projectId: string) => {
     const project = await projectService.getById(projectId);

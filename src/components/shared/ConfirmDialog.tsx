@@ -1,4 +1,4 @@
-// TODO: GÖRKE GÖYNÜGÜR
+// TODO: GÖRKE GÖYNÜGÜR [ZipService Modülü]
 // ConfirmDialog: Silme/cleanup gibi tehlikeli işlemler için onay diyaloğu.
 //
 // Props:

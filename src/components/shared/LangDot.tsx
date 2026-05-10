@@ -1,4 +1,4 @@
-// TODO: GÖRKE GÖYNÜGÜR
+// TODO: EGE AYYILDIZ [ConfigService Modülü]
 // Mock data bağımlılığını kaldır ve langColors'ı bu dosya içinde tanımla:
 //   const langColors: Record<string, string> = {
 //     c: '#555555',

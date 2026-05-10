@@ -1,10 +1,10 @@
-// TODO: GÖRKE GÖYNÜGÜR
+// TODO: DEMİR CÜCÜ [FileService + Infra Modülü]
 // Tüm tipleri gözden geçir ve frontend bileşenlerinle uyumlu olduğundan emin ol.
 // Özellikle:
 // 1. StudentStatus tipindeki tüm değerlerin StatusBadge bileşeninde karşılığı olmalı
 // 2. DashboardStats tipinin Dashboard sayfasının ihtiyaçlarını karşıladığını doğrula
 // 3. Project tipindeki 'configuration' alanının getAll'da doldurulup doldurulmadığını kontrol et
-//    (şu an sadece getById'de dolduruluyor - Demir Cücü ile koordine et)
+//    (şu an sadece getById'de dolduruluyor - Ege Çağan ile koordine et)
 
 // --- Configuration [R4][R5] ---
 

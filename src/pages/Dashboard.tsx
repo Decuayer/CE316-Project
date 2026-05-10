@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '@/components/shared/Icon';
 import { LangDot } from '@/components/shared/LangDot';
 import { StatCard, cardStyle } from '@/components/shared/StatCard';
-// TODO: EGE AYYILDIZ
+// TODO: ALİ EMRE AÇIKKOL [ProjectService Modülü]
 // Aşağıdaki mock data import'larını kaldır ve gerçek IPC çağrılarını kullan.
 // import { ipc } from '@/lib/ipc' ekle.
 // useEffect içinde ipc.project.getStatistics() çağır ve state'e ata.
@@ -17,7 +17,7 @@ import { CONFIGS, PROJECTS, RESULTS } from '@/lib/mockData';
 export default function Dashboard() {
   const navigate = useNavigate();
 
-  // TODO: EGE AYYILDIZ
+  // TODO: ALİ EMRE AÇIKKOL [ProjectService Modülü]
   // 1. useState ile stats state'i oluştur (tip: DashboardStats | null)
   // 2. useState ile loading state'i ekle
   // 3. useEffect içinde ipc.project.getStatistics() çağır:
