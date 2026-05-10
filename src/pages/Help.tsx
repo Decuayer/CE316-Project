@@ -1,3 +1,16 @@
+// TODO: GÖRKE GÖYNÜGÜR
+// Help sayfasını gerçek kullanım kılavuzu olarak genişlet [R2].
+// 1. Mevcut statik içerik iyi bir başlangıç, ama daha detaylı olmalı.
+// 2. Eklenecek bölümler:
+//    - "Quick Start Guide": Adım adım ilk kullanım rehberi (screenshots ile desteklenebilir)
+//    - "Configuration Templates": Yaygın diller için hazır konfigürasyon örnekleri
+//      (C, C++, Java, Python için compileCommand ve runCommand örnekleri)
+//    - "Template Variables": {{sourceFile}}, {{outputName}}, {{args}} açıklamaları
+//    - "ZIP Format": Öğrencilerin ZIP dosyalarını nasıl hazırlaması gerektiği
+//    - "Troubleshooting / FAQ": Sık karşılaşılan sorunlar ve çözümleri
+//      (compiler bulunamadı, timeout, vb.)
+// 3. Keyboard shortcuts bölümü ekle (varsa)
+// 4. Versiyon bilgisi göster (package.json'dan alınabilir)
 import { cardStyle } from '@/components/shared/StatCard';
 
 interface HelpSection {

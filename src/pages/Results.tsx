@@ -1,7 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { cardStyle } from '@/components/shared/StatCard';
+// TODO: EGE AYYILDIZ
+// 1. Mock data import'larını kaldır ve gerçek IPC kullan:
+//    import { ipc } from '@/lib/ipc';
+//    import type { Project, StudentResult } from '@shared/types';
+// 2. Tüm projelerin sonuçlarını topla:
+//    - ipc.project.getAll() ile projeleri çek
+//    - Her proje için ipc.project.getResults(id) çağır
+//    - Tüm StudentResult'ları tek bir dizide birleştir
+// 3. Filter'ları shared/types.ts'deki StudentStatus tipine uyumlu yap:
+//    'pass' | 'fail' | 'compile_error' | 'runtime_error' | 'timeout' | 'missing_source' | 'zip_error'
+// 4. statusConfig'i mockData yerine kendi tanımından al
 import { PROJECTS, RESULTS, statusConfig, type ResultStatus } from '@/lib/mockData';
 
 type Filter = 'ALL' | ResultStatus;

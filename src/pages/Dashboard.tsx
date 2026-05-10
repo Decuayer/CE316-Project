@@ -1,13 +1,31 @@
 import * as React from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { Icon } from '@/components/shared/Icon';
 import { LangDot } from '@/components/shared/LangDot';
 import { StatCard, cardStyle } from '@/components/shared/StatCard';
+// TODO: EGE AYYILDIZ
+// Aşağıdaki mock data import'larını kaldır ve gerçek IPC çağrılarını kullan.
+// import { ipc } from '@/lib/ipc' ekle.
+// useEffect içinde ipc.project.getStatistics() çağır ve state'e ata.
+// DashboardStats tipini '@shared/types' den import et.
+// Mock verilere (CONFIGS, PROJECTS, RESULTS) bağımlı tüm hesaplamaları
+// getStatistics()'ten dönen gerçek veriye göre güncelle.
 import { CONFIGS, PROJECTS, RESULTS } from '@/lib/mockData';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+
+  // TODO: EGE AYYILDIZ
+  // 1. useState ile stats state'i oluştur (tip: DashboardStats | null)
+  // 2. useState ile loading state'i ekle
+  // 3. useEffect içinde ipc.project.getStatistics() çağır:
+  //    useEffect(() => {
+  //      ipc.project.getStatistics().then(setStats).finally(() => setLoading(false));
+  //    }, []);
+  // 4. Aşağıdaki PROJECTS, CONFIGS, RESULTS kullanımlarını stats ile değiştir
+  // 5. loading durumunda spinner/skeleton göster
 
   const totalSubmissions = PROJECTS.reduce((a, p) => a + p.submissionsCount, 0);
   const passCount = RESULTS.filter((r) => r.status === 'PASS').length;

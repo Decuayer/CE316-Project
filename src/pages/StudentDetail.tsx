@@ -1,8 +1,29 @@
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { Icon } from '@/components/shared/Icon';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { cardStyle } from '@/components/shared/StatCard';
+// TODO: EGE AYYILDIZ
+// 1. Mock data import'larını kaldır ve gerçek IPC kullan:
+//    import { ipc } from '@/lib/ipc';
+//    import type { Project, StudentResult } from '@shared/types';
+// 2. useEffect içinde:
+//    - ipc.project.getById(id) ile projeyi çek
+//    - ipc.project.getResults(id) ile sonuçları çek
+//    - Sonuçlardan ilgili studentId'nin StudentResult'ını bul
+// 3. StudentResult'ın detaylı bilgilerini göster:
+//    - compileOutput (code bloğu içinde)
+//    - compileError (varsa kırmızı uyarı)
+//    - executionOutput (code bloğu içinde)
+//    - executionError (varsa kırmızı uyarı)
+//    - expectedOutput vs actualOutput karşılaştırması (diff view)
+// 4. steps dizisini StudentResult'ın gerçek alanlarına göre güncelle:
+//    - Extracted: result.zipExtracted
+//    - Source Found: result.sourceFound
+//    - Compiled: result.compiled
+//    - Executed: result.executed
+//    - Matched: result.outputMatched
 import { PROJECTS, RESULTS, type ResultStatus } from '@/lib/mockData';
 
 interface StepDef {

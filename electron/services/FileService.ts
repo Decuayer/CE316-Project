@@ -55,4 +55,13 @@ export class FileService {
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
     return entries.filter(e => e.isDirectory()).map(e => e.name);
   }
+
+  // TODO: EGE ÇAĞAN KANTAR
+  // readFile(): Dosya içeriğini string olarak oku.
+  // ExecutionService.resolveDataSource() metodu bu fonksiyona ihtiyaç duyuyor.
+  // fs.readFile(filePath, 'utf-8') kullanarak implement et.
+  async readFile(filePath: string): Promise<string> {
+    return await fs.readFile(filePath, 'utf-8');
+  }
 }
+

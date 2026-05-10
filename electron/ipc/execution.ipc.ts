@@ -27,36 +27,47 @@ export function registerExecutionIpc(ipcMain: IpcMain, dbService: DatabaseServic
   const zipService = new ZipService();
   const executionService = new ExecutionService();
 
-  // TODO [R6]: extract every .zip in dirPath into project.submissionsDir/<studentId>/
-  // studentId = ZIP filename without the .zip extension.
+  // TODO: ALİ EMRE AÇIKKOL
+  // execution:importZips handler'ına try-catch error handling ekle.
+  // Hata durumunda açıklayıcı mesaj döndür (örn: "ZIP dizini bulunamadı").
   ipcMain.handle('execution:importZips', async (_e, projectId: string, dirPath: string) => {
     const project = await projectService.getById(projectId);
     if (!project) throw new Error(`Project not found: ${projectId}`);
     return zipService.extractAll(dirPath, project.submissionsDir);
   });
 
-  // TODO [R7][R8]: run the full per-student pipeline, sequentially.
-  // Returns ProjectResults when every student has been processed.
-  // The renderer relies on this promise's lifecycle alone for the run button.
+  // TODO: ALİ EMRE AÇIKKOL
+  // execution:run handler'ını güncelle:
+  // 1. executionService.runAll(project) çağrıldıktan sonra dönen ProjectResults'ı DB'ye kaydet.
+  // 2. Her StudentResult'ı results tablosuna INSERT et:
+  //    INSERT INTO results (projectId, runAt, studentId, zipExtracted, sourceFound,
+  //      compiled, compileOutput, compileError, executed, executionOutput, executionError,
+  //      executionTimedOut, outputMatched, expectedOutput, actualOutput, status, timestamp)
+  //    VALUES (...)
+  // 3. Transaction kullan (db.transaction) - ya hepsi kaydedilsin ya hiçbiri.
+  // 4. try-catch ile hataları yakala ve renderer'a anlamlı hata mesajı gönder.
+  // BU KRİTİK: Sonuçlar DB'ye kaydedilmezse proje tekrar açıldığında sonuçlar kaybolur.
   ipcMain.handle('execution:run', async (_e, projectId: string) => {
     const project = await projectService.getById(projectId);
     if (!project) throw new Error(`Project not found: ${projectId}`);
     return executionService.runAll(project);
   });
 
-  // TODO: remove every file under each student folder whose name is NOT
-  // configuration.sourceFileExpected. Source files and folder structure stay.
-  // The "are you sure?" confirmation lives in the renderer (Project Detail).
+  // TODO: ALİ EMRE AÇIKKOL
+  // execution:cleanup handler'ına try-catch ekle.
+  // Hata mesajını renderer'a ilet.
   ipcMain.handle('execution:cleanup', async (_e, projectId: string) => {
     const project = await projectService.getById(projectId);
     if (!project) throw new Error(`Project not found: ${projectId}`);
     return executionService.cleanupArtifacts(project);
   });
 
-  // TODO [R6]: list every directory under project.submissionsDir
+  // TODO: ALİ EMRE AÇIKKOL
+  // execution:getStudents handler'ına try-catch ekle.
   ipcMain.handle('execution:getStudents', async (_e, projectId: string) => {
     const project = await projectService.getById(projectId);
     if (!project) throw new Error(`Project not found: ${projectId}`);
     return zipService.listStudents(project.submissionsDir);
   });
 }
+

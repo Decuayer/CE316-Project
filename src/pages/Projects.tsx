@@ -1,14 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { Icon } from '@/components/shared/Icon';
 import { LangDot } from '@/components/shared/LangDot';
 import { cardStyle } from '@/components/shared/StatCard';
+// TODO: EGE AYYILDIZ
+// 1. Mock data import'unu kaldır ve gerçek IPC kullan:
+//    import { ipc } from '@/lib/ipc';
+//    import type { Project } from '@shared/types';
+// 2. useEffect içinde ipc.project.getAll() çağır:
+//    useEffect(() => { ipc.project.getAll().then(setProjects); }, []);
+// 3. "New Project" butonuna onClick ekle - CreateProjectModal aç (Görke'nin yapacağı bileşen)
+//    Modal'da: name, configurationId (dropdown), input (text/file), expectedOutput (text/file)
+// 4. Proje oluşturulduktan sonra listeyi yenile
+// 5. Tablo'daki language ve configName alanlarını Project tipinden al
+//    (project.configuration.language, project.configuration.name)
 import { PROJECTS } from '@/lib/mockData';
 
 export default function Projects() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  // TODO: EGE AYYILDIZ
+  // const [projects, setProjects] = useState<Project[]>([]);
+  // const [loading, setLoading] = useState(true);
+  // filtered'ı projects state'inden hesapla
   const filtered = PROJECTS.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()),
   );

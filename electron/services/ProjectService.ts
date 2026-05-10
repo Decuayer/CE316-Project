@@ -143,6 +143,14 @@ export class ProjectService {
     };
   }
 
+  // TODO: DEMİR CÜCÜ
+  // getStatistics(): recentProjects dizisini doldur.
+  // Son 5 projeyi çek, her biri için:
+  //   - results tablosundan studentCount (DISTINCT studentId) hesapla
+  //   - passRate hesapla (status='pass' olan / toplam)  
+  //   - lastRun: en son runAt değerini al
+  //   - status: eğer results varsa 'completed', yoksa 'pending' olarak belirle
+  // Dashboard sayfasının doğru çalışması için bu kısım kritik.
   async getStatistics(): Promise<DashboardStats> {
     const db = this.dbService.getDb();
 
@@ -153,7 +161,9 @@ export class ProjectService {
     const totalResults = (db.prepare('SELECT count(*) as count FROM results').get() as any).count;
     const overallPassRate = totalResults > 0 ? (passes / totalResults) * 100 : 0;
 
-    // TODO: recentProjects kısmı UI gereksinimlerine göre detaylandırılabilir.
+    // TODO: DEMİR CÜCÜ — recentProjects kısmını implement et
+    // Aşağıdaki boş diziyi dolduracak SQL sorgularını yaz.
+    // Her proje için: id, name, status, studentCount, passRate, lastRun
 
     return {
       totalProjects,
@@ -163,10 +173,10 @@ export class ProjectService {
     };
   }
 
-  /**
-   * TODO: internal helper - load the live Configuration referenced by
-   * configurationId from configurationsDir. Used at create() time.
-   */
+  // TODO: DEMİR CÜCÜ
+  // Bu loadConfiguration metodu artık kullanılmıyor (DB'ye geçildi).
+  // Eğer gerçekten ihtiyaç yoksa bu metodu tamamen sil.
+  // Eğer getById içinde configuration join'i farklı yapılacaksa refactor et.
   private async loadConfiguration(_configurationId: string): Promise<Configuration> {
     throw new Error('Not implemented: ProjectService.loadConfiguration');
   }

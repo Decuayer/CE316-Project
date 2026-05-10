@@ -1,4 +1,3 @@
-import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import type { Configuration } from '../../shared/types';
 import { FileService } from './FileService';
@@ -8,7 +7,7 @@ import { DatabaseService } from './DatabaseService';
 export class ConfigService {
   private fileService = new FileService();
 
-  constructor(private dbService: DatabaseService) {}
+  constructor(private dbService: DatabaseService) { }
 
 
   async getAll(): Promise<Configuration[]> {
@@ -98,7 +97,7 @@ export class ConfigService {
   async export(id: string, targetPath: string): Promise<void> {
     const config = await this.getById(id);
     if (!config) throw new Error(`Configuration not found: ${id}`);
-    
+
     // Export as Json
     await this.fileService.writeJson(targetPath, config);
   }

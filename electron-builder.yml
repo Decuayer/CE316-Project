@@ -1,3 +1,9 @@
+# TODO: DEMİR CÜCÜ
+# 1. build/ klasörü oluştur ve içine icon.ico dosyası ekle [R1]
+#    - 256x256 px minimum, ICO formatında
+#    - Uygulama logosu olarak IAE temalı bir ikon tasarla
+# 2. build/icon.png de ekle (macOS için)
+# 3. Installer'ın doğru çalıştığını test et: npm run dist
 appId: com.ce316.iae
 productName: "Integrated Assignment Environment"
 directories:

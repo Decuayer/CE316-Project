@@ -17,43 +17,46 @@ import { DatabaseService } from '../services/DatabaseService';
  *   config:import   - Import a .json config file           [R5]
  *   config:export   - Export a config as a .json file      [R5]
  */
+
+// TODO: ALİ EMRE AÇIKKOL
+// Tüm IPC handler'lara try-catch error handling ekle.
+// Hata durumunda renderer'a anlamlı hata mesajları ilet.
+// Örnek pattern:
+//   try { return await configService.getAll(); }
+//   catch (error) { throw new Error(`Konfigürasyonlar yüklenemedi: ${error.message}`); }
 export function registerConfigIpc(ipcMain: IpcMain, dbService: DatabaseService): void {
   const configService = new ConfigService(dbService);
 
-  // TODO [R4]: list every configuration in ~/.iae/configurations/
   ipcMain.handle('config:getAll', async () => {
     return configService.getAll();
   });
 
-  // TODO [R4]: read and return a single config by id; return null if missing
   ipcMain.handle('config:getById', async (_e, id: string) => {
     return configService.getById(id);
   });
 
-  // TODO [R4]: validate inputs, generate uuid + timestamps, persist
   ipcMain.handle('config:create', async (_e, data) => {
     return configService.create(data);
   });
 
-  // TODO [R4]: load existing, merge fields, bump updatedAt, persist
   ipcMain.handle('config:update', async (_e, id: string, data) => {
     return configService.update(id, data);
   });
 
-  // TODO [R4]: delete the config file
-  // Snapshotted projects are unaffected (config is copied into project at creation).
+  // TODO: ALİ EMRE AÇIKKOL
+  // config:delete - Silmeden önce bu config'i kullanan proje var mı kontrol et.
+  // Varsa kullanıcıya uyarı mesajı döndür (FOREIGN KEY RESTRICT zaten engelleyecek ama
+  // kullanıcıya anlamlı hata mesajı vermek gerekiyor).
   ipcMain.handle('config:delete', async (_e, id: string) => {
     return configService.delete(id);
   });
 
-  // TODO [R5]: copy a .json file from disk into ~/.iae/configurations/
-  // Regenerate the id on import to avoid collisions.
   ipcMain.handle('config:import', async (_e, filePath: string) => {
     return configService.import(filePath);
   });
 
-  // TODO [R5]: copy a config file to a user-chosen destination
   ipcMain.handle('config:export', async (_e, id: string, targetPath: string) => {
     return configService.export(id, targetPath);
   });
 }
+

@@ -1,6 +1,29 @@
+import { useState, useEffect } from 'react';
+
 import { Icon } from '@/components/shared/Icon';
 import { LangDot } from '@/components/shared/LangDot';
 import { cardStyle } from '@/components/shared/StatCard';
+// TODO: EGE AYYILDIZ
+// 1. Mock data import'unu kaldır ve gerçek IPC kullan:
+//    import { ipc } from '@/lib/ipc';
+//    import type { Configuration } from '@shared/types';
+// 2. useEffect içinde ipc.config.getAll() çağır:
+//    useEffect(() => { ipc.config.getAll().then(setConfigs); }, []);
+// 3. "New Config" butonuna onClick ekle:
+//    - CreateConfigModal aç (Görke'nin yapacağı bileşen)
+//    - Form alanları: name, language, compileCommand, compileArgs, runCommand, runArgs, sourceFileExpected
+//    - await ipc.config.create(data) ile kaydet
+//    - Listeyi yenile
+// 4. Her config kartına edit/delete butonları ekle:
+//    - Edit: CreateConfigModal'ı mevcut verilerle aç, await ipc.config.update(id, data)
+//    - Delete: ConfirmDialog göster, await ipc.config.delete(id)
+// 5. "Import JSON" butonuna onClick ekle:
+//    - ipc.dialog.openFile([{ name: 'JSON', extensions: ['json'] }]) ile dosya seç
+//    - await ipc.config.import(filePath)
+//    - Listeyi yenile
+// 6. Her config kartına "Export" butonu ekle:
+//    - ipc.dialog.saveFile(config.name + '.json', [...]) ile hedef seç
+//    - await ipc.config.export(id, targetPath)
 import { CONFIGS } from '@/lib/mockData';
 
 export default function Configurations() {

@@ -1,5 +1,7 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import fs from 'fs/promises';
+import path from 'path';
 import type {
   Project,
   ProjectResults,
@@ -29,112 +31,71 @@ const execFileAsync = promisify(execFile);
 export class ExecutionService {
   private fileService = new FileService();
 
-  /**
-   * runAll - process every student, sequentially.
-   *
-   * TODO [R7][R8]:
-   *   1. Iterate every directory in project.submissionsDir (one student per dir).
-   *      Use FileService.listDirs to get the studentId list.
-   *   2. For each student: const result = await this.runStudent(studentDir, project)
-   *      then APPEND result to results/results.json IMMEDIATELY - so a process
-   *      crash mid-run does not lose previously-completed students.
-   *   3. Return the aggregated ProjectResults when the loop finishes.
-   *      Shape:
-   *        { projectId: project.id, runAt: ISO timestamp, students: StudentResult[] }
-   */
+  // TODO: EGE ÇAĞAN KANTAR
+  // runAll(): Tüm öğrencileri sırayla işle.
+  // 1. project.submissionsDir altındaki tüm alt klasörleri listele (FileService.listDirs)
+  //    Her klasör adı = studentId
+  // 2. Her öğrenci için:
+  //    const studentDir = path.join(project.submissionsDir, studentId)
+  //    const result = await this.runStudent(studentDir, project)
+  //    result'ı students dizisine ekle
+  // 3. Toplam sonucu döndür:
+  //    { projectId: project.id, runAt: new Date().toISOString(), students: StudentResult[] }
+  // NOT: Bir öğrenci hata verse bile döngü devam etmeli (runStudent zaten catch yapıyor)
   async runAll(_project: Project): Promise<ProjectResults> {
     void this.fileService;
     void execFileAsync;
     throw new Error('Not implemented: ExecutionService.runAll');
   }
 
-  /**
-   * runStudent - the per-student pipeline.
-   *
-   * IMPORTANT: this method NEVER throws. Any uncaught exception degrades
-   * to a recorded status on the returned StudentResult.
-   *
-   * Steps (see evaluation-flow-design.md "Per-student pipeline"):
-   *
-   *   1. Verify configuration.sourceFileExpected exists at the folder root
-   *      -> not found: status = 'missing_source'; return early.
-   *
-   *   2. Compile (only if configuration.compileCommand is set) [R7]
-   *      - Substitute {{sourceFile}} and {{outputName}} in compileArgs
-   *        via this.buildArgv(...).
-   *      - execFile(compileCommand, args, {
-   *          cwd: studentDir,
-   *          stdio: ['ignore','pipe','pipe']
-   *        })
-   *      - Non-zero exit OR ENOENT -> status = 'compile_error';
-   *        record stderr + "compiler not found: <cmd>" if ENOENT.
-   *
-   *   3. Resolve input via this.resolveDataSource(project.input)
-   *      then this.parseInputToArgv(raw) -> argvFromInput: string[]
-   *      File missing/unreadable -> status = 'runtime_error'.
-   *
-   *   4. Run [R7]
-   *      - this.buildArgv(configuration.runArgs, sourceFile, outputName, argvFromInput)
-   *        -> finalArgv (with {{args}} spread into multiple positions).
-   *      - execFile(runCommand, finalArgv, {
-   *          cwd: studentDir,
-   *          stdio: ['ignore','pipe','pipe'],
-   *          timeout: 10000
-   *        })
-   *      - Killed by timeout -> status = 'timeout';
-   *        record partial stdout + "killed after 10s".
-   *      - Non-zero exit OR ENOENT -> status = 'runtime_error';
-   *        record stderr + "executable not found: <cmd>" if ENOENT.
-   *
-   *   5. Resolve expected output via this.resolveDataSource(project.expectedOutput).
-   *      No splitting - bytes are used verbatim.
-   *      File missing/unreadable -> status = 'runtime_error'.
-   *
-   *   6. Compare [R8]
-   *      - actualStdout === expectedString (strict)
-   *      - match -> status = 'pass'; else -> status = 'fail'
-   *
-   *   7. Return a fully-populated StudentResult (every field set).
-   *
-   * Set studentId from path.basename(studentDir).
-   */
+  // TODO: EGE ÇAĞAN KANTAR
+  // runStudent(): Tek bir öğrencinin compile -> run -> compare pipeline'ını çalıştır.
+  // ÖNEMLİ: Bu metod ASLA throw etmemeli. Tüm hatalar StudentResult'a kaydedilmeli.
+  //
+  // Adımlar:
+  // 1. studentId = path.basename(studentDir)
+  // 2. Kaynak dosya kontrolü: configuration.sourceFileExpected dosyası var mı?
+  //    - Yoksa: status='missing_source', erken dön
+  // 3. Compile (sadece configuration.compileCommand varsa):
+  //    - buildArgv ile compileArgs'ı tokenize et
+  //    - execFileAsync(compileCommand, args, { cwd: studentDir, timeout: 10000 })
+  //    - Hata: status='compile_error', compileOutput/compileError doldur
+  //    - ENOENT: "compiler not found: <cmd>"
+  // 4. Input çözümle: resolveDataSource(project.input) -> parseInputToArgv(raw) -> argvFromInput
+  // 5. Run:
+  //    - buildArgv ile runArgs'ı tokenize et
+  //    - execFileAsync(runCommand, finalArgv, { cwd: studentDir, timeout: 10000 })
+  //    - Timeout: status='timeout', "killed after 10s"
+  //    - Hata: status='runtime_error'
+  // 6. Expected output çözümle: resolveDataSource(project.expectedOutput)
+  // 7. Karşılaştır: actualStdout.trim() === expectedString.trim()
+  //    - Eşleşiyorsa: status='pass'
+  //    - Eşleşmiyorsa: status='fail'
+  // 8. Tam doldurulmuş StudentResult döndür
   async runStudent(_studentDir: string, _project: Project): Promise<StudentResult> {
     throw new Error('Not implemented: ExecutionService.runStudent');
   }
 
-  /**
-   * cleanupArtifacts - "Clean up artifacts" button.
-   *
-   * TODO: walk every studentId folder under project.submissionsDir and
-   * remove every file whose name is NOT configuration.sourceFileExpected.
-   * Leaves source files and folder structure intact.
-   *
-   * Confirmation modal lives in the renderer (Project Detail page).
-   */
+  // TODO: EGE ÇAĞAN KANTAR
+  // cleanupArtifacts(): Her öğrenci klasöründeki gereksiz dosyaları sil.
+  // 1. project.submissionsDir altındaki tüm öğrenci klasörlerini listele
+  // 2. Her klasörde: configuration.sourceFileExpected HARİÇ tüm dosyaları sil
+  // 3. Klasör yapısını koru, sadece dosyaları sil
+  // Kullanım: "Clean up artifacts" butonu (ProjectDetail sayfasında)
   async cleanupArtifacts(_project: Project): Promise<void> {
     throw new Error('Not implemented: ExecutionService.cleanupArtifacts');
   }
 
-  // -------------- internal helpers (TODO during implementation) --------------
+  // -------------- internal helpers --------------
 
-  /**
-   * buildArgv - template variable substitution per
-   * evaluation-flow-design.md "Substitution algorithm".
-   *
-   * TODO:
-   *   1. If template is undefined or empty, return [].
-   *   2. Split the template on whitespace into tokens.
-   *   3. For each token:
-   *        - If token === '{{args}}', SPREAD argvFromInput at this position.
-   *          (Each input line becomes a distinct argv element.)
-   *        - Else replace any {{sourceFile}} / {{outputName}} occurrences
-   *          inside the token via plain string substitution.
-   *   4. Return the resulting string[] - passed straight to execFile (no shell).
-   *
-   * v1 limitation: tokens cannot contain whitespace (no quoting). The lecturer
-   * can put spaceful paths in compileCommand/runCommand fields, which are
-   * passed straight to execFile and not tokenized.
-   */
+  // TODO: EGE ÇAĞAN KANTAR
+  // buildArgv(): Template değişkenlerini yerine koy ve argv dizisi oluştur.
+  // 1. template undefined veya boşsa [] döndür
+  // 2. Template'i whitespace'e göre split et -> token dizisi
+  // 3. Her token için:
+  //    - '{{args}}' ise: argvFromInput'un tüm elemanlarını SPREAD et
+  //    - Diğer: {{sourceFile}} ve {{outputName}} değerlerini string replace yap
+  // 4. Sonuç string[] döndür (doğrudan execFile'a verilecek, shell yok)
   private buildArgv(
     _template: string | undefined,
     _sourceFile: string,
@@ -144,32 +105,23 @@ export class ExecutionService {
     throw new Error('Not implemented: ExecutionService.buildArgv');
   }
 
-  /**
-   * resolveDataSource - turn a DataSource into its string contents.
-   *
-   * TODO:
-   *   - 'text': return source.value as-is.
-   *   - 'file': fs.readFile(source.path, 'utf-8') and return the string.
-   *   - Errors propagate to the caller (mapped to status by the pipeline).
-   */
+  // TODO: EGE ÇAĞAN KANTAR
+  // resolveDataSource(): DataSource'u string içeriğe çevir.
+  // - type === 'text': doğrudan source.value döndür
+  // - type === 'file': fs.readFile(source.path, 'utf-8') ile oku ve döndür
+  // - Hatalar caller'a yansısın (pipeline status olarak kaydeder)
   private async resolveDataSource(_source: DataSource): Promise<string> {
     throw new Error('Not implemented: ExecutionService.resolveDataSource');
   }
 
-  /**
-   * parseInputToArgv - normalize an input string into argv entries.
-   *
-   * TODO (per evaluation-flow-design.md step 4):
-   *   1. Split the raw string on '\n'.
-   *   2. Strip a single trailing '\r' from each resulting line.
-   *      (This is INPUT parsing, not output normalization. The output
-   *      comparator stays strict.)
-   *   3. Drop a single trailing empty line if the source ended with '\n'
-   *      (so "a\nb\n" becomes ["a","b"], not ["a","b",""]).
-   *   4. Internal spaces within a line are preserved verbatim - each line
-   *      becomes ONE argv entry, no further tokenization.
-   */
+  // TODO: EGE ÇAĞAN KANTAR
+  // parseInputToArgv(): Input string'ini argv elemanlarına ayır.
+  // 1. '\n' ile split et
+  // 2. Her satırdan sondaki '\r' karakterini temizle
+  // 3. Son satır boşsa kaldır ("a\nb\n" -> ["a","b"], ["a","b",""] değil)
+  // 4. Satır içi boşluklar korunur - her satır TEK bir argv elemanı olur
   private parseInputToArgv(_raw: string): string[] {
     throw new Error('Not implemented: ExecutionService.parseInputToArgv');
   }
 }
+

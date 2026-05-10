@@ -1,3 +1,13 @@
+// TODO: GÖRKE GÖYNÜGÜR
+// Mock data bağımlılığını kaldır ve langColors'ı bu dosya içinde tanımla:
+//   const langColors: Record<string, string> = {
+//     c: '#555555',
+//     cpp: '#f34b7d',
+//     python: '#3572A5',
+//     java: '#b07219',
+//     haskell: '#5e5086',
+//   };
+// LangKey tipi yerine string kullan (Configuration.language string'dir).
 import { langColors, type LangKey } from '@/lib/mockData';
 
 interface LangDotProps {

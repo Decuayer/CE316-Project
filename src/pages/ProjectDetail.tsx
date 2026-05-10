@@ -1,9 +1,31 @@
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { Icon } from '@/components/shared/Icon';
 import { LangDot } from '@/components/shared/LangDot';
 import { StatCard, cardStyle } from '@/components/shared/StatCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+// TODO: EGE AYYILDIZ
+// 1. Mock data import'larını kaldır ve gerçek IPC kullan:
+//    import { ipc } from '@/lib/ipc';
+//    import type { Project, ProjectResults } from '@shared/types';
+// 2. useEffect içinde ipc.project.getById(id) ve ipc.project.getResults(id) çağır
+// 3. "Run Evaluation" butonuna onClick ekle:
+//    - Loading state göster (buton disabled + spinner)
+//    - await ipc.execution.run(project.id)
+//    - Sonuçları yeniden yükle
+// 4. "Import ZIPs" butonu ekle:
+//    - ipc.dialog.openDirectory() ile klasör seç
+//    - await ipc.execution.importZips(project.id, dirPath)
+//    - Öğrenci sayısını güncelle
+// 5. "Delete Project" butonu ekle:
+//    - ConfirmDialog göster (Görke'nin yapacağı bileşen)
+//    - await ipc.project.delete(project.id)
+//    - navigate('/projects') ile geri dön
+// 6. "Clean up artifacts" butonu ekle:
+//    - ConfirmDialog göster
+//    - await ipc.execution.cleanup(project.id)
+// 7. Sonuç tablosunda StudentResult tipini kullan (mock ResultStatus yerine)
 import { CONFIGS, PROJECTS, RESULTS } from '@/lib/mockData';
 
 export default function ProjectDetail() {
