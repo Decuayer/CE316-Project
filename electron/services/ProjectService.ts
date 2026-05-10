@@ -41,7 +41,12 @@ export class ProjectService {
   async getAll(): Promise<Project[]> {
     const db = this.dbService.getDb();
     const rows = db.prepare('SELECT * FROM projects ORDER BY updatedAt DESC').all();
-    return rows.map((row) => this.mapProject(row));
+    return rows.map((row) => {
+      const project = this.mapProject(row);
+      const config = db.prepare('SELECT * FROM configurations WHERE id = ?').get(project.configurationId);
+      project.configuration = config as Configuration;
+      return project;
+    });
   }
 
   /**
@@ -210,11 +215,23 @@ export class ProjectService {
       };
     });
 
+    const statusRows = db.prepare('SELECT status, COUNT(*) as count FROM results GROUP BY status').all() as any[];
+    const statusBreakdown = {
+      pass: 0, fail: 0, compile_error: 0, runtime_error: 0,
+      timeout: 0, missing_source: 0, zip_error: 0,
+    };
+    statusRows.forEach(r => {
+      if (r.status in statusBreakdown) {
+        statusBreakdown[r.status as keyof typeof statusBreakdown] = Number(r.count);
+      }
+    });
+
     return {
       totalProjects,
       totalStudents,
       overallPassRate,
-      recentProjects 
+      recentProjects,
+      statusBreakdown,
     };
   }
 }

@@ -48,13 +48,34 @@ const api = {
 
   // --- Project operations [R3][R10] ---
   project: {
-    getAll: () => invoke('project:getAll'),
-    getById: (id: string) => invoke('project:getById', id),
-    create: (data: unknown) => invoke('project:create', data),
-    update: (id: string, data: unknown) => invoke('project:update', id, data),
-    delete: (id: string) => invoke('project:delete', id),
-    getResults: (id: string) => invoke('project:getResults', id),
-    getStatistics: () => invoke('project:getStatistics'),
+    getAll: async () => {
+      try { return await ipcRenderer.invoke('project:getAll'); }
+      catch (error) { console.error('IPC Error [project:getAll]:', error); throw error; }
+    },
+    getById: async (id: string) => {
+      try { return await ipcRenderer.invoke('project:getById', id); }
+      catch (error) { console.error('IPC Error [project:getById]:', error); throw error; }
+    },
+    create: async (data: any) => {
+      try { return await ipcRenderer.invoke('project:create', data); }
+      catch (error) { console.error('IPC Error [project:create]:', error); throw error; }
+    },
+    update: async (id: string, data: any) => {
+      try { return await ipcRenderer.invoke('project:update', id, data); }
+      catch (error) { console.error('IPC Error [project:update]:', error); throw error; }
+    },
+    delete: async (id: string) => {
+      try { return await ipcRenderer.invoke('project:delete', id); }
+      catch (error) { console.error('IPC Error [project:delete]:', error); throw error; }
+    },
+    getResults: async (id: string) => {
+      try { return await ipcRenderer.invoke('project:getResults', id); }
+      catch (error) { console.error('IPC Error [project:getResults]:', error); throw error; }
+    },
+    getStatistics: async () => {
+      try { return await ipcRenderer.invoke('project:getStatistics'); }
+      catch (error) { console.error('IPC Error [project:getStatistics]:', error); throw error; }
+    },
   },
 
   // --- Execution operations [R6][R7][R8] ---
