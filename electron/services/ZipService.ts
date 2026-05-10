@@ -47,7 +47,7 @@ export class ZipService {
     }
   }
 
-  // TODO: DEMİR CÜCÜ
+  // DONE: DEMİR CÜCÜ
   // extractAll(): dirPath'deki tüm ZIP'leri projectSubmissionsDir altına çıkart.
   // 1. processDirectory(dirPath) ile ZIP listesini al
   // 2. Her ZIP için:
@@ -78,12 +78,12 @@ export class ZipService {
     return successfulExtractions;
   }
 
-  // TODO: DEMİR CÜCÜ
+  // DONE: DEMİR CÜCÜ
   // listStudents(): projectSubmissionsDir altındaki tüm alt klasörleri listele.
   // Her klasör adı bir studentId'dir.
   // FileService.listDirs(projectSubmissionsDir) kullan.
   async listStudents(_projectSubmissionsDir: string): Promise<string[]> {
-    throw new Error('Not implemented: ZipService.listStudents');
+    return await this.fileService.listDirs(_projectSubmissionsDir);
   }
 }
 
