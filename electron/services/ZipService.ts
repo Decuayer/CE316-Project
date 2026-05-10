@@ -54,11 +54,28 @@ export class ZipService {
   //    - studentId = path.basename(zipFile, '.zip')
   //    - targetDir = path.join(projectSubmissionsDir, studentId)
   //    - extractZip(zipFile, targetDir) çağır
-  // 3. ÖNEMLİ: Bir ZIP hata verirse ATLAMALI, diğer öğrencilere devam etmeli (try-catch)
+  // 3. ÖNEMLİ: Bir ZIP hata verirse ATLAMALI, diğe r öğrencilere devam etmeli (try-catch)
   //    Proje tanımında "must continue with the next student" diyor.
   // 4. Başarıyla çıkartılan studentId'leri döndür
-  async extractAll(_dirPath: string, _projectSubmissionsDir: string): Promise<string[]> {
-    throw new Error('Not implemented: ZipService.extractAll');
+  async extractAll(dirPath: string, projectSubmissionsDir: string): Promise<string[]> {
+    const zipFiles = await this.processDirectory(dirPath);
+    const successfulExtractions: string[] = [];
+
+    for (const zipFile of zipFiles) {
+      const ext = path.extname(zipFile);
+      const studentId = path.basename(zipFile, ext);
+      const targetDir = path.join(projectSubmissionsDir, studentId);
+
+      try {
+        await this.extractZip(zipFile, targetDir);
+        successfulExtractions.push(studentId);
+      } catch (error) {
+        console.error(`Skipping ${zipFile} due to error:`, error);
+        // Hata durumunu atlayıp diğer öğrencilerle devam 
+      }
+    } 
+
+    return successfulExtractions;
   }
 
   // TODO: DEMİR CÜCÜ
