@@ -5,16 +5,10 @@
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
-    "predev": "npm run rebuild:electron",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "dist": "npm run build && electron-builder",
-    "pretest": "npm run rebuild:node",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "rebuild:node": "npm rebuild better-sqlite3 --build-from-source",
-    "rebuild:electron": "electron-builder install-app-deps"
+    "dist": "npm run build && electron-builder"
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
@@ -31,7 +25,6 @@
   "devDependencies": {
     "@types/adm-zip": "^0.5.7",
     "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^22.10.5",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@types/uuid": "^10.0.0",
@@ -44,8 +37,7 @@
     "typescript": "^5.7.3",
     "vite": "^6.0.7",
     "vite-plugin-electron": "^0.28.8",
-    "vite-plugin-electron-renderer": "^0.14.6",
-    "vitest": "^3.2.4"
+    "vite-plugin-electron-renderer": "^0.14.6"
   },
   "author": "",
   "license": "ISC"
