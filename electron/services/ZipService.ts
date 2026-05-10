@@ -23,10 +23,11 @@ export class ZipService {
   // 2. .zip uzantısını case-insensitive kontrol et (toLowerCase ile)
   // 3. Her dosya için path.join(dirPath, filename) ile absolute path oluştur
   // 4. string[] olarak döndür
-  async processDirectory(_dirPath: string): Promise<string[]> {
-    void this.fileService;
-    void path;
-    throw new Error('Not implemented: ZipService.processDirectory');
+  async processDirectory(dirPath: string): Promise<string[]> {
+    const files = await this.fileService.listFiles(dirPath);
+    return files
+      .filter(file => file.toLowerCase().endsWith('.zip'))
+      .map(file => path.join(dirPath, file));
   }
 
   // TODO: DEMİR CÜCÜ
