@@ -157,3 +157,70 @@ describe('ConfigService.update — validation', () => {
     db.close();
   });
 });
+
+describe('ConfigService.delete — FK safety', () => {
+  it('deletes a config that is not referenced by any project', async () => {
+    const db = makeTestDb();
+    const svc = new ConfigService(db);
+    const created = await svc.create({
+      name: 'C Default',
+      language: 'c',
+      runCommand: './main',
+      sourceFileExpected: 'main.c',
+    });
+
+    await svc.delete(created.id);
+
+    expect(await svc.getById(created.id)).toBeNull();
+    db.close();
+  });
+
+  it('refuses to delete a config in use by a project, naming the project count', async () => {
+    const db = makeTestDb();
+    const svc = new ConfigService(db);
+    const created = await svc.create({
+      name: 'C Default',
+      language: 'c',
+      runCommand: './main',
+      sourceFileExpected: 'main.c',
+    });
+
+    db.getDb().prepare(`
+      INSERT INTO projects (id, name, configurationId, input, expectedOutput, submissionsDir, createdAt, updatedAt)
+      VALUES ('p1', 'HW1', @configId, '{"type":"text","value":""}', '{"type":"text","value":""}', '/tmp', @now, @now)
+    `).run({ configId: created.id, now: new Date().toISOString() });
+
+    await expect(svc.delete(created.id)).rejects.toThrow(/in use by 1 project/i);
+    expect(await svc.getById(created.id)).not.toBeNull();
+    db.close();
+  });
+
+  it('pluralizes the project count', async () => {
+    const db = makeTestDb();
+    const svc = new ConfigService(db);
+    const created = await svc.create({
+      name: 'C Default',
+      language: 'c',
+      runCommand: './main',
+      sourceFileExpected: 'main.c',
+    });
+
+    const insertProject = db.getDb().prepare(`
+      INSERT INTO projects (id, name, configurationId, input, expectedOutput, submissionsDir, createdAt, updatedAt)
+      VALUES (@id, @name, @configId, '{"type":"text","value":""}', '{"type":"text","value":""}', '/tmp', @now, @now)
+    `);
+    const now = new Date().toISOString();
+    insertProject.run({ id: 'p1', name: 'HW1', configId: created.id, now });
+    insertProject.run({ id: 'p2', name: 'HW2', configId: created.id, now });
+
+    await expect(svc.delete(created.id)).rejects.toThrow(/in use by 2 projects/i);
+    db.close();
+  });
+
+  it('throws Configuration not found when deleting an unknown id', async () => {
+    const db = makeTestDb();
+    const svc = new ConfigService(db);
+    await expect(svc.delete('does-not-exist')).rejects.toThrow(/configuration not found/i);
+    db.close();
+  });
+});

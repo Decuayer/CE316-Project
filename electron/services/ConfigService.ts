@@ -110,11 +110,27 @@ export class ConfigService {
   }
 
   /**
-   * Deletes a configuration from the database by its ID.
-   * (Task 2 will add FK-aware safe-delete on top of this.)
+   * Deletes a configuration. Refuses if any project still references it,
+   * surfacing a friendly count instead of the raw FK violation.
    */
   async delete(id: string): Promise<void> {
     const db = this.dbService.getDb();
+
+    const existing = db.prepare('SELECT id FROM configurations WHERE id = ?').get(id);
+    if (!existing) throw new Error(`Configuration not found: ${id}`);
+
+    const refs = db
+      .prepare('SELECT COUNT(*) AS count FROM projects WHERE configurationId = ?')
+      .get(id) as { count: number };
+
+    if (refs.count > 0) {
+      const noun = refs.count === 1 ? 'project' : 'projects';
+      throw new Error(
+        `Cannot delete configuration: it is in use by ${refs.count} ${noun}. ` +
+        `Delete the dependent projects first.`,
+      );
+    }
+
     db.prepare('DELETE FROM configurations WHERE id = ?').run(id);
   }
 
