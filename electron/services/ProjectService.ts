@@ -196,12 +196,4 @@ export class ProjectService {
       recentProjects 
     };
   }
-
-  // TODO: DEMİR CÜCÜ
-  // Bu loadConfiguration metodu artık kullanılmıyor (DB'ye geçildi).
-  // Eğer gerçekten ihtiyaç yoksa bu metodu tamamen sil.
-  // Eğer getById içinde configuration join'i farklı yapılacaksa refactor et.
-  private async loadConfiguration(_configurationId: string): Promise<Configuration> {
-    throw new Error('Not implemented: ProjectService.loadConfiguration');
-  }
 }
