@@ -135,20 +135,75 @@ export class ConfigService {
   }
 
   /**
-   * Imports a configuration from a JSON file and saves it to the database.
-   * (Task 3 will harden this with shape validation.)
+   * Imports a configuration from a JSON file. Validates the shape, strips
+   * any foreign id/timestamps from the source file, and routes through
+   * `create()` so a fresh id and current timestamps are generated.
+   *
+   * Surfaces friendly errors for the common FS/JSON failure modes so the
+   * renderer can display them inline without leaking ENOENT / SyntaxError
+   * jargon to the lecturer.
    */
   async import(filePath: string): Promise<Configuration> {
-    const content = await this.fileService.readJson<Configuration>(filePath);
-    return this.create({
-      name: content.name,
-      language: content.language,
-      compileCommand: content.compileCommand,
-      compileArgs: content.compileArgs,
-      runCommand: content.runCommand,
-      runArgs: content.runArgs,
-      sourceFileExpected: content.sourceFileExpected,
-    });
+    let raw: unknown;
+    try {
+      raw = await this.fileService.readJson<unknown>(filePath);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        throw new Error(
+          `Could not read configuration file: the file is not valid JSON (${err.message})`,
+        );
+      }
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === 'ENOENT') {
+        throw new Error(`Could not read configuration file: file does not exist at ${filePath}`);
+      }
+      if (code === 'EACCES' || code === 'EPERM') {
+        throw new Error(`Could not read configuration file: permission denied for ${filePath}`);
+      }
+      throw new Error(
+        `Could not read configuration file: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    const parsed = this.parseConfigPayload(raw);
+    return this.create(parsed);
+  }
+
+  /**
+   * Asserts that an arbitrary value matches the Configuration shape (modulo
+   * id/createdAt/updatedAt, which are regenerated on import). Returns a
+   * trimmed input ready to feed to create().
+   */
+  private parseConfigPayload(raw: unknown): ConfigInput {
+    if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+      throw new Error('Invalid configuration file: not a configuration object');
+    }
+
+    const obj = raw as Record<string, unknown>;
+
+    const assertString = (field: string, value: unknown): string => {
+      if (typeof value !== 'string') {
+        throw new Error(`Invalid configuration file: ${field} must be a string`);
+      }
+      return value;
+    };
+
+    const assertOptionalString = (field: string, value: unknown): string | undefined => {
+      if (value === undefined || value === null) return undefined;
+      if (typeof value !== 'string') {
+        throw new Error(`Invalid configuration file: ${field} must be a string`);
+      }
+      return value;
+    };
+
+    return {
+      name: assertString('name', obj.name),
+      language: assertString('language', obj.language),
+      compileCommand: assertOptionalString('compileCommand', obj.compileCommand),
+      compileArgs: assertOptionalString('compileArgs', obj.compileArgs),
+      runCommand: assertString('runCommand', obj.runCommand),
+      runArgs: assertOptionalString('runArgs', obj.runArgs),
+      sourceFileExpected: assertString('sourceFileExpected', obj.sourceFileExpected),
+    };
   }
 
   /**

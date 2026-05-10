@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { promises as fs } from 'fs';
+import os from 'os';
+import path from 'path';
 import { makeTestDb } from './testUtils';
 import { ConfigService } from '../ConfigService';
 
@@ -221,6 +224,139 @@ describe('ConfigService.delete — FK safety', () => {
     const db = makeTestDb();
     const svc = new ConfigService(db);
     await expect(svc.delete('does-not-exist')).rejects.toThrow(/configuration not found/i);
+    db.close();
+  });
+});
+
+async function writeTempJson(data: unknown): Promise<string> {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'iae-import-'));
+  const filePath = path.join(dir, 'config.json');
+  await fs.writeFile(filePath, JSON.stringify(data), 'utf-8');
+  return filePath;
+}
+
+describe('ConfigService.import — shape validation', () => {
+  it('imports a valid configuration and assigns a fresh id/timestamps', async () => {
+    const db = makeTestDb();
+    const svc = new ConfigService(db);
+
+    const filePath = await writeTempJson({
+      id: 'foreign-id-from-other-machine',
+      name: 'C Default',
+      language: 'c',
+      compileCommand: 'gcc',
+      compileArgs: '{{sourceFile}} -o {{outputName}}',
+      runCommand: './{{outputName}}',
+      runArgs: null,
+      sourceFileExpected: 'main.c',
+      createdAt: '2000-01-01T00:00:00.000Z',
+      updatedAt: '2000-01-01T00:00:00.000Z',
+    });
+
+    const imported = await svc.import(filePath);
+
+    expect(imported.id).not.toBe('foreign-id-from-other-machine');
+    expect(imported.name).toBe('C Default');
+    expect(imported.createdAt).not.toBe('2000-01-01T00:00:00.000Z');
+    expect(new Date(imported.createdAt).getFullYear()).toBeGreaterThan(2020);
+    db.close();
+  });
+
+  it('rejects a JSON file that is not an object', async () => {
+    const db = makeTestDb();
+    const svc = new ConfigService(db);
+    const filePath = await writeTempJson([1, 2, 3]);
+    await expect(svc.import(filePath)).rejects.toThrow(/not a configuration object/i);
+    db.close();
+  });
+
+  it('rejects a configuration object with wrong field types', async () => {
+    const db = makeTestDb();
+    const svc = new ConfigService(db);
+    const filePath = await writeTempJson({
+      name: 'C',
+      language: 'c',
+      runCommand: 12345,
+      sourceFileExpected: 'main.c',
+    });
+    await expect(svc.import(filePath)).rejects.toThrow(/runCommand must be a string/i);
+    db.close();
+  });
+
+  it('rejects a configuration object missing required fields', async () => {
+    const db = makeTestDb();
+    const svc = new ConfigService(db);
+    const filePath = await writeTempJson({
+      language: 'c',
+      runCommand: './main',
+    });
+    await expect(svc.import(filePath)).rejects.toThrow(/name/i);
+    db.close();
+  });
+
+  it('round-trips through export then import preserving fields', async () => {
+    const db = makeTestDb();
+    const svc = new ConfigService(db);
+
+    const original = await svc.create({
+      name: 'Java',
+      language: 'java',
+      compileCommand: 'javac',
+      compileArgs: '{{sourceFile}}',
+      runCommand: 'java',
+      runArgs: 'Main {{args}}',
+      sourceFileExpected: 'Main.java',
+    });
+
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'iae-roundtrip-'));
+    const exportPath = path.join(tmpDir, 'java.json');
+    await svc.export(original.id, exportPath);
+
+    const imported = await svc.import(exportPath);
+    expect(imported.id).not.toBe(original.id);
+    expect(imported.name).toBe(original.name);
+    expect(imported.language).toBe(original.language);
+    expect(imported.compileCommand).toBe(original.compileCommand);
+    expect(imported.compileArgs).toBe(original.compileArgs);
+    expect(imported.runCommand).toBe(original.runCommand);
+    expect(imported.runArgs).toBe(original.runArgs);
+    expect(imported.sourceFileExpected).toBe(original.sourceFileExpected);
+    db.close();
+  });
+
+  it('silently drops extra unknown fields on import', async () => {
+    const db = makeTestDb();
+    const svc = new ConfigService(db);
+    const filePath = await writeTempJson({
+      name: 'C',
+      language: 'c',
+      runCommand: './main',
+      sourceFileExpected: 'main.c',
+      unknownField: 'ignore me',
+      anotherExtra: { nested: true },
+    });
+    const imported = await svc.import(filePath);
+    expect(imported.name).toBe('C');
+    expect((imported as Record<string, unknown>).unknownField).toBeUndefined();
+    db.close();
+  });
+
+  it('surfaces a readable error when the file does not exist', async () => {
+    const db = makeTestDb();
+    const svc = new ConfigService(db);
+    await expect(svc.import('/does/not/exist/config.json')).rejects.toThrow(
+      /could not read configuration file/i,
+    );
+    db.close();
+  });
+
+  it('surfaces a readable error when the file is not valid JSON', async () => {
+    const db = makeTestDb();
+    const svc = new ConfigService(db);
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'iae-badjson-'));
+    const filePath = path.join(dir, 'bad.json');
+    await fs.writeFile(filePath, '{ this is not json', 'utf-8');
+    await expect(svc.import(filePath)).rejects.toThrow(/not valid json/i);
     db.close();
   });
 });
