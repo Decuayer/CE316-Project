@@ -13,6 +13,9 @@ import { FileService } from './FileService';
  * Per evaluation-flow-design.md "Step details > 1. Extract ZIP":
  *   - studentId = ZIP filename without the .zip extension
  *   - Each ZIP is extracted into projectSubmissionsDir/<studentId>/
+ *
+ * MODULE OWNER: GÖRKE GÖYNÜGÜR [ZipService Modülü]
+ * IPC: execution.ipc.ts (importZips, getStudents handler'ları)
  */
 export class ZipService {
   private fileService = new FileService();

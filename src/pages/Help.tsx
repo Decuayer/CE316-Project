@@ -1,4 +1,4 @@
-// TODO: GÖRKE GÖYNÜGÜR
+// TODO: GÖRKE GÖYNÜGÜR [ZipService Modülü]
 // Help sayfasını gerçek kullanım kılavuzu olarak genişlet [R2].
 // 1. Mevcut statik içerik iyi bir başlangıç, ama daha detaylı olmalı.
 // 2. Eklenecek bölümler:

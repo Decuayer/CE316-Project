@@ -19,6 +19,20 @@ async function invoke<T = any>(channel: string, ...args: unknown[]): Promise<T> 
     throw err;
   }
 }
+// Expose typed IPC methods to the renderer process via contextBridge
+// This is the secure bridge between main and renderer processes
+//
+// Error handling sorumlulukları (modül bazlı):
+// TODO: EGE AYYILDIZ [ConfigService Modülü] — config.* çağrılarına try-catch ekle
+// TODO: ALİ EMRE AÇIKKOL [ProjectService Modülü] — project.* çağrılarına try-catch ekle
+// TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü] — execution.run/cleanup çağrılarına try-catch ekle
+// TODO: GÖRKE GÖYNÜGÜR [ZipService Modülü] — execution.importZips/getStudents çağrılarına try-catch ekle
+//
+// Örnek pattern:
+//   getAll: async () => {
+//     try { return await ipcRenderer.invoke('config:getAll'); }
+//     catch (error) { console.error('IPC Error:', error); throw error; }
+//   }
 
 const api = {
   // --- Configuration operations [R4][R5] ---

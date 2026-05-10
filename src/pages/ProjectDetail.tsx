@@ -5,7 +5,7 @@ import { Icon } from '@/components/shared/Icon';
 import { LangDot } from '@/components/shared/LangDot';
 import { StatCard, cardStyle } from '@/components/shared/StatCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-// TODO: EGE AYYILDIZ
+// TODO: ALİ EMRE AÇIKKOL [ProjectService Modülü]
 // 1. Mock data import'larını kaldır ve gerçek IPC kullan:
 //    import { ipc } from '@/lib/ipc';
 //    import type { Project, ProjectResults } from '@shared/types';

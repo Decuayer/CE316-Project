@@ -18,7 +18,7 @@ import { DatabaseService } from '../services/DatabaseService';
  *   project:getStatistics - Aggregate dashboard stats
  */
 
-// TODO: ALİ EMRE AÇIKKOL
+// TODO: ALİ EMRE AÇIKKOL [ProjectService Modülü]
 // Tüm IPC handler'lara try-catch error handling ekle.
 // Hata durumunda renderer'a anlamlı hata mesajları ilet.
 // Özellikle project:create'de configurationId geçersizse anlaşılır hata mesajı ver.
@@ -34,7 +34,7 @@ export function registerProjectIpc(ipcMain: IpcMain, dbService: DatabaseService,
 
   ipcMain.handle('project:create', async (_e, data) => projectService.create(data));
 
-  // TODO: ALİ EMRE AÇIKKOL
+  // TODO: ALİ EMRE AÇIKKOL [ProjectService Modülü]
   // project:update - configurationId ve id alanlarının güncellenmesini engelle.
   // data objesinden bu alanları filtrele.
   ipcMain.handle('project:update', async (_e, id: string, data) => projectService.update(id, data));
