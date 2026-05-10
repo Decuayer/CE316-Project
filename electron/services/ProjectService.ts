@@ -10,6 +10,12 @@ import type {
 import { FileService } from './FileService';
 import { DatabaseService } from './DatabaseService';
 
+/**
+ * ProjectService
+ *
+ * Manages project entities, including database CRUD operations, 
+ * submission directories, and dashboard statistics calculations.
+ */
 export class ProjectService {
   private fileService = new FileService();
 
@@ -18,6 +24,9 @@ export class ProjectService {
     private projectsDir: string
   ) {}
 
+  /**
+   * Helper method to parse JSON string fields (input, expectedOutput) from the database row.
+   */
   private mapProject(row: any): Project {
     return {
       ...row,
@@ -26,12 +35,18 @@ export class ProjectService {
     };
   }
   
+  /**
+   * Retrieves all projects from the database, ordered by the last update date (newest first).
+   */
   async getAll(): Promise<Project[]> {
     const db = this.dbService.getDb();
     const rows = db.prepare('SELECT * FROM projects ORDER BY updatedAt DESC').all();
     return rows.map((row) => this.mapProject(row));
   }
 
+  /**
+   * Retrieves a specific project by its ID, joining its associated configuration.
+   */
   async getById(id: string): Promise<Project | null> {
     const db = this.dbService.getDb();
     const row = db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
@@ -44,7 +59,9 @@ export class ProjectService {
     return project;
   }
 
-
+  /**
+   * Creates a new project, inserts it into the database, and creates its physical submissions directory.
+   */
   async create(data: {
     name: string;
     configurationId: string;
@@ -80,7 +97,9 @@ export class ProjectService {
     return (await this.getById(id))!;
   }
 
-
+  /**
+   * Updates an existing project's metadata in the database.
+   */
   async update(id: string, data: Partial<Project>): Promise<Project> {
     const existing = await this.getById(id);
     if (!existing) throw new Error(`Project not found: ${id}`);
@@ -108,6 +127,10 @@ export class ProjectService {
     return (await this.getById(id))!;
   }
 
+  /**
+   * Deletes a project along with its execution results from the database, 
+   * and removes its physical directory.
+   */
   async delete(id: string): Promise<void> {
     const db = this.dbService.getDb();
     
@@ -120,7 +143,9 @@ export class ProjectService {
     await this.fileService.deleteDir(projectDir);
   }
 
-
+  /**
+   * Retrieves the latest execution results for a given project, including student-specific data.
+   */
   async getResults(id: string): Promise<ProjectResults | null> {
     const db = this.dbService.getDb();
     const latestRun = db.prepare('SELECT runAt FROM results WHERE projectId = ? ORDER BY runAt DESC LIMIT 1').get(id) as { runAt: string } | undefined;
@@ -143,14 +168,10 @@ export class ProjectService {
     };
   }
 
-  // DONE: DEMİR CÜCÜ
-  // getStatistics(): recentProjects dizisini doldur.
-  // Son 5 projeyi çek, her biri için:
-  //   - results tablosundan studentCount (DISTINCT studentId) hesapla
-  //   - passRate hesapla (status='pass' olan / toplam)  
-  //   - lastRun: en son runAt değerini al
-  //   - status: eğer results varsa 'completed', yoksa 'pending' olarak belirle
-  // Dashboard sayfasının doğru çalışması için bu kısım kritik.
+  /**
+   * Calculates overall statistics for the dashboard.
+   * Includes total projects, total students, overall pass rate, and metrics for the 5 most recent projects.
+   */
   async getStatistics(): Promise<DashboardStats> {
     const db = this.dbService.getDb();
 
