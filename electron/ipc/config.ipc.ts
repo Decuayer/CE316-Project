@@ -1,12 +1,14 @@
 import { IpcMain } from 'electron';
-import path from 'path';
 import { ConfigService } from '../services/ConfigService';
 import { DatabaseService } from '../services/DatabaseService';
 
 /**
- * Configuration IPC handlers - Task 4 [R3][R4][R5]
+ * Configuration IPC handlers [R3][R4][R5]
  *
- * Wires renderer-facing IPC channels to ConfigService.
+ * Wires renderer-facing IPC channels to ConfigService. Every handler is
+ * wrapped so that any error (DB constraint violation, FS error, validation
+ * failure) crosses the IPC boundary as a renderer-friendly Error with a
+ * complete sentence in `.message`.
  *
  * Channels:
  *   config:getAll   - List all configurations              [R4]
@@ -17,46 +19,60 @@ import { DatabaseService } from '../services/DatabaseService';
  *   config:import   - Import a .json config file           [R5]
  *   config:export   - Export a config as a .json file      [R5]
  */
-
-// TODO: EGE AYYILDIZ [ConfigService Modülü]
-// Tüm IPC handler'lara try-catch error handling ekle.
-// Hata durumunda renderer'a anlamlı hata mesajları ilet.
-// Örnek pattern:
-//   try { return await configService.getAll(); }
-//   catch (error) { throw new Error(`Konfigürasyonlar yüklenemedi: ${error.message}`); }
 export function registerConfigIpc(ipcMain: IpcMain, dbService: DatabaseService): void {
   const configService = new ConfigService(dbService);
 
-  ipcMain.handle('config:getAll', async () => {
-    return configService.getAll();
-  });
+  const wrap = <Args extends unknown[], R>(
+    channel: string,
+    fn: (...args: Args) => Promise<R>,
+  ) => async (_event: unknown, ...args: Args): Promise<R> => {
+    try {
+      return await fn(...args);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`[${channel}]`, message);
+      throw new Error(message);
+    }
+  };
 
-  ipcMain.handle('config:getById', async (_e, id: string) => {
-    return configService.getById(id);
-  });
+  ipcMain.handle(
+    'config:getAll',
+    wrap('config:getAll', () => configService.getAll()),
+  );
 
-  ipcMain.handle('config:create', async (_e, data) => {
-    return configService.create(data);
-  });
+  ipcMain.handle(
+    'config:getById',
+    wrap('config:getById', (id: string) => configService.getById(id)),
+  );
 
-  ipcMain.handle('config:update', async (_e, id: string, data) => {
-    return configService.update(id, data);
-  });
+  ipcMain.handle(
+    'config:create',
+    wrap('config:create', (data: Parameters<ConfigService['create']>[0]) =>
+      configService.create(data),
+    ),
+  );
 
-  // TODO: EGE AYYILDIZ [ConfigService Modülü]
-  // config:delete - Silmeden önce bu config'i kullanan proje var mı kontrol et.
-  // Varsa kullanıcıya uyarı mesajı döndür (FOREIGN KEY RESTRICT zaten engelleyecek ama
-  // kullanıcıya anlamlı hata mesajı vermek gerekiyor).
-  ipcMain.handle('config:delete', async (_e, id: string) => {
-    return configService.delete(id);
-  });
+  ipcMain.handle(
+    'config:update',
+    wrap('config:update', (id: string, data: Parameters<ConfigService['update']>[1]) =>
+      configService.update(id, data),
+    ),
+  );
 
-  ipcMain.handle('config:import', async (_e, filePath: string) => {
-    return configService.import(filePath);
-  });
+  ipcMain.handle(
+    'config:delete',
+    wrap('config:delete', (id: string) => configService.delete(id)),
+  );
 
-  ipcMain.handle('config:export', async (_e, id: string, targetPath: string) => {
-    return configService.export(id, targetPath);
-  });
+  ipcMain.handle(
+    'config:import',
+    wrap('config:import', (filePath: string) => configService.import(filePath)),
+  );
+
+  ipcMain.handle(
+    'config:export',
+    wrap('config:export', (id: string, targetPath: string) =>
+      configService.export(id, targetPath),
+    ),
+  );
 }
-
