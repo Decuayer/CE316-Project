@@ -9,6 +9,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "dist": "npm run build && electron-builder",
+    "pretest": "npm run rebuild:node",
     "test": "vitest run",
     "test:watch": "vitest",
     "rebuild:node": "npm rebuild better-sqlite3 --build-from-source",
