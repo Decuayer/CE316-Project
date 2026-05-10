@@ -17,12 +17,9 @@ import { FileService } from './FileService';
 export class ZipService {
   private fileService = new FileService();
 
-  // DONE: DEMİR CÜCÜ
-  // processDirectory(): dirPath altındaki tüm .zip dosyalarının absolute path'lerini döndür.
-  // 1. FileService.listFiles(dirPath) ile dosyaları listele
-  // 2. .zip uzantısını case-insensitive kontrol et (toLowerCase ile)
-  // 3. Her dosya için path.join(dirPath, filename) ile absolute path oluştur
-  // 4. string[] olarak döndür
+  /**
+   * Retrieves absolute paths of all .zip files in the given directory.
+   */
   async processDirectory(dirPath: string): Promise<string[]> {
     const files = await this.fileService.listFiles(dirPath);
     return files
@@ -30,13 +27,10 @@ export class ZipService {
       .map(file => path.join(dirPath, file));
   }
 
-  // DONE: DEMİR CÜCÜ
-  // extractZip(): Tek bir ZIP dosyasını targetDir'e çıkart.
-  // 1. FileService.ensureDir(targetDir) ile hedef klasörü oluştur
-  // 2. new AdmZip(zipPath) ile ZIP'i aç
-  // 3. zip.extractAllTo(targetDir, true) ile çıkart (overwrite=true)
-  // 4. ZIP bozuksa descriptive bir hata fırlat (caller bunu 'zip_error' olarak kaydeder)
-  // 5. try-catch ile AdmZip hatalarını yakala
+  /**
+   * Extracts a single ZIP file to the target directory. 
+   * Throws an error if extraction fails.
+   */
   async extractZip(zipPath: string, targetDir: string): Promise<void> {
     try {
       await this.fileService.ensureDir(targetDir);
@@ -47,16 +41,11 @@ export class ZipService {
     }
   }
 
-  // DONE: DEMİR CÜCÜ
-  // extractAll(): dirPath'deki tüm ZIP'leri projectSubmissionsDir altına çıkart.
-  // 1. processDirectory(dirPath) ile ZIP listesini al
-  // 2. Her ZIP için:
-  //    - studentId = path.basename(zipFile, '.zip')
-  //    - targetDir = path.join(projectSubmissionsDir, studentId)
-  //    - extractZip(zipFile, targetDir) çağır
-  // 3. ÖNEMLİ: Bir ZIP hata verirse ATLAMALI, diğe r öğrencilere devam etmeli (try-catch)
-  //    Proje tanımında "must continue with the next student" diyor.
-  // 4. Başarıyla çıkartılan studentId'leri döndür
+  /**
+   * Extracts all ZIP files from dirPath into projectSubmissionsDir.
+   * Skips corrupted ZIPs and continues with the next one.
+   * Returns an array of successfully extracted student IDs.
+   */
   async extractAll(dirPath: string, projectSubmissionsDir: string): Promise<string[]> {
     const zipFiles = await this.processDirectory(dirPath);
     const successfulExtractions: string[] = [];
@@ -78,10 +67,9 @@ export class ZipService {
     return successfulExtractions;
   }
 
-  // DONE: DEMİR CÜCÜ
-  // listStudents(): projectSubmissionsDir altındaki tüm alt klasörleri listele.
-  // Her klasör adı bir studentId'dir.
-  // FileService.listDirs(projectSubmissionsDir) kullan.
+  /**
+   * Lists all student directories (student IDs) inside projectSubmissionsDir.
+   */ 
   async listStudents(_projectSubmissionsDir: string): Promise<string[]> {
     return await this.fileService.listDirs(_projectSubmissionsDir);
   }
