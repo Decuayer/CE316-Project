@@ -17,7 +17,7 @@ import { FileService } from './FileService';
 export class ZipService {
   private fileService = new FileService();
 
-  // TODO: DEMİR CÜCÜ
+  // DONE: DEMİR CÜCÜ
   // processDirectory(): dirPath altındaki tüm .zip dosyalarının absolute path'lerini döndür.
   // 1. FileService.listFiles(dirPath) ile dosyaları listele
   // 2. .zip uzantısını case-insensitive kontrol et (toLowerCase ile)
@@ -30,16 +30,21 @@ export class ZipService {
       .map(file => path.join(dirPath, file));
   }
 
-  // TODO: DEMİR CÜCÜ
+  // DONE: DEMİR CÜCÜ
   // extractZip(): Tek bir ZIP dosyasını targetDir'e çıkart.
   // 1. FileService.ensureDir(targetDir) ile hedef klasörü oluştur
   // 2. new AdmZip(zipPath) ile ZIP'i aç
   // 3. zip.extractAllTo(targetDir, true) ile çıkart (overwrite=true)
   // 4. ZIP bozuksa descriptive bir hata fırlat (caller bunu 'zip_error' olarak kaydeder)
   // 5. try-catch ile AdmZip hatalarını yakala
-  async extractZip(_zipPath: string, _targetDir: string): Promise<void> {
-    void AdmZip;
-    throw new Error('Not implemented: ZipService.extractZip');
+  async extractZip(zipPath: string, targetDir: string): Promise<void> {
+    try {
+      await this.fileService.ensureDir(targetDir);
+      const zip = new AdmZip(zipPath);
+      zip.extractAllTo(targetDir, true);
+    } catch (error: any) {
+      throw new Error(`ZIP extraction failed for ${zipPath}: ${error.message}`);
+    }
   }
 
   // TODO: DEMİR CÜCÜ
