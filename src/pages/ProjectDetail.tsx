@@ -1,38 +1,65 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { ipc } from '@/lib/ipc';
+import type { Project, ProjectResults } from '@shared/types';
 import { Icon } from '@/components/shared/Icon';
 import { LangDot } from '@/components/shared/LangDot';
 import { StatCard, cardStyle } from '@/components/shared/StatCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-// TODO: ALİ EMRE AÇIKKOL [ProjectService Modülü]
-// 1. Mock data import'larını kaldır ve gerçek IPC kullan:
-//    import { ipc } from '@/lib/ipc';
-//    import type { Project, ProjectResults } from '@shared/types';
-// 2. useEffect içinde ipc.project.getById(id) ve ipc.project.getResults(id) çağır
-// 3. "Run Evaluation" butonuna onClick ekle:
-//    - Loading state göster (buton disabled + spinner)
-//    - await ipc.execution.run(project.id)
-//    - Sonuçları yeniden yükle
-// 4. "Import ZIPs" butonu ekle:
-//    - ipc.dialog.openDirectory() ile klasör seç
-//    - await ipc.execution.importZips(project.id, dirPath)
-//    - Öğrenci sayısını güncelle
-// 5. "Delete Project" butonu ekle:
-//    - ConfirmDialog göster (Görke'nin yapacağı bileşen)
-//    - await ipc.project.delete(project.id)
-//    - navigate('/projects') ile geri dön
-// 6. "Clean up artifacts" butonu ekle:
-//    - ConfirmDialog göster
-//    - await ipc.execution.cleanup(project.id)
-// 7. Sonuç tablosunda StudentResult tipini kullan (mock ResultStatus yerine)
-import { CONFIGS, PROJECTS, RESULTS } from '@/lib/mockData';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const project = PROJECTS.find((p) => p.id === id);
+  const [project, setProject] = useState<Project | null>(null);
+  const [results, setResults] = useState<ProjectResults | null>(null);
+  const [students, setStudents] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [running, setRunning] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmCleanup, setConfirmCleanup] = useState(false);
+
+  const load = async () => {
+    if (!id) return;
+    try {
+      const [p, r, s] = await Promise.all([
+        ipc.project.getById(id),
+        ipc.project.getResults(id),
+        ipc.execution.getStudents(id),
+      ]);
+      setProject(p);
+      setResults(r);
+      setStudents(s);
+    } catch (err) {
+      console.error('Failed to load project:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, [id]);
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <button
+          onClick={() => navigate('/projects')}
+          style={{
+            background: 'var(--bg-hover)', border: '1px solid var(--border)',
+            borderRadius: 8, padding: '6px 10px', cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center',
+            color: 'var(--text-secondary)', width: 'fit-content',
+          }}
+        >
+          <Icon name="chevronLeft" size={16} />
+        </button>
+        <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Loading…</div>
+      </div>
+    );
+  }
 
   if (!project) {
     return (
@@ -40,15 +67,10 @@ export default function ProjectDetail() {
         <button
           onClick={() => navigate('/projects')}
           style={{
-            background: 'var(--bg-hover)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: '6px 10px',
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            color: 'var(--text-secondary)',
-            width: 'fit-content',
+            background: 'var(--bg-hover)', border: '1px solid var(--border)',
+            borderRadius: 8, padding: '6px 10px', cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center',
+            color: 'var(--text-secondary)', width: 'fit-content',
           }}
         >
           <Icon name="chevronLeft" size={16} />
@@ -61,24 +83,61 @@ export default function ProjectDetail() {
     );
   }
 
-  const results = RESULTS.filter((r) => r.projectId === project.id);
-  const passCount = results.filter((r) => r.status === 'PASS').length;
-  const config = CONFIGS.find((c) => c.id === project.configId);
+  const config = project.configuration;
+  const passCount = results?.students.filter((s) => s.status === 'pass').length ?? 0;
+  const totalStudents = results?.students.length ?? students.length;
+  const hasResults = results !== null && results.students.length > 0;
+
+  const handleImportZips = async () => {
+    const dirPath = await ipc.dialog.openDirectory();
+    if (!dirPath) return;
+    setImporting(true);
+    try {
+      const imported = await ipc.execution.importZips(project.id, dirPath);
+      setStudents(imported);
+    } catch (err: any) {
+      console.error('Import failed:', err);
+      alert(`Import failed: ${err.message}`);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleRunEvaluation = async () => {
+    setRunning(true);
+    try {
+      const r = await ipc.execution.run(project.id);
+      setResults(r);
+      setStudents(r.students.map((s) => s.studentId));
+    } catch (err: any) {
+      console.error('Evaluation failed:', err);
+      alert(`Evaluation failed: ${err.message}`);
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    await ipc.project.delete(project.id);
+    navigate('/projects');
+  };
+
+  const handleCleanup = async () => {
+    await ipc.execution.cleanup(project.id);
+    setConfirmCleanup(false);
+    await load();
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <button
           onClick={() => navigate('/projects')}
           style={{
-            background: 'var(--bg-hover)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: '6px 10px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            color: 'var(--text-secondary)',
+            background: 'var(--bg-hover)', border: '1px solid var(--border)',
+            borderRadius: 8, padding: '6px 10px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', color: 'var(--text-secondary)',
           }}
         >
           <Icon name="chevronLeft" size={16} />
@@ -87,47 +146,95 @@ export default function ProjectDetail() {
           <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em' }}>
             {project.name}
           </h1>
-          <div
-            style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}
-          >
-            <LangDot lang={project.language} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+            <LangDot lang={config?.language ?? ''} />
             <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-              {project.configName}
+              {config?.name ?? '—'}
             </span>
           </div>
         </div>
-        {project.status === 'pending' && (
+
+        {/* Action buttons */}
+        <div style={{ display: 'flex', gap: 8 }}>
           <button
+            onClick={handleImportZips}
+            disabled={importing}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '10px 18px',
-              borderRadius: 10,
-              border: 'none',
-              background: 'var(--green)',
-              color: '#fff',
-              fontWeight: 700,
-              fontSize: 13,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '9px 14px', borderRadius: 10,
+              border: '1px solid var(--border)',
+              background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
+              fontWeight: 600, fontSize: 13, cursor: importing ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit', opacity: importing ? 0.6 : 1,
             }}
           >
-            <Icon name="play" size={16} color="#fff" /> Run Evaluation
+            <Icon name="folder" size={15} />
+            {importing ? 'Importing…' : 'Import ZIPs'}
           </button>
-        )}
+
+          <button
+            onClick={handleRunEvaluation}
+            disabled={running || students.length === 0}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '9px 16px', borderRadius: 10, border: 'none',
+              background: 'var(--green)', color: '#fff',
+              fontWeight: 700, fontSize: 13,
+              cursor: running || students.length === 0 ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit',
+              opacity: running || students.length === 0 ? 0.6 : 1,
+            }}
+          >
+            <Icon name="play" size={15} color="#fff" />
+            {running ? 'Running…' : 'Run Evaluation'}
+          </button>
+
+          {hasResults && (
+            <button
+              onClick={() => setConfirmCleanup(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '9px 14px', borderRadius: 10,
+                border: '1px solid var(--border)',
+                background: 'var(--bg-tertiary)', color: 'var(--text-muted)',
+                fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              <Icon name="trash" size={15} /> Clean Up
+            </button>
+          )}
+
+          <button
+            onClick={() => setConfirmDelete(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '9px 14px', borderRadius: 10,
+              border: '1px solid var(--red)',
+              background: 'var(--red-dim)', color: 'var(--red)',
+              fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            <Icon name="trash" size={15} color="var(--red)" /> Delete
+          </button>
+        </div>
       </div>
 
+      {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-        <StatCard icon="student" label="Submissions" value={project.submissionsCount} />
+        <StatCard icon="student" label="Submissions" value={totalStudents} />
         <StatCard
           icon="check"
           label="Pass Rate"
-          value={results.length ? `${Math.round((passCount / results.length) * 100)}%` : '—'}
+          value={hasResults ? `${Math.round((passCount / results!.students.length) * 100)}%` : '—'}
         />
-        <StatCard icon="clock" label="Created" value={project.createdAt} />
+        <StatCard
+          icon="clock"
+          label="Created"
+          value={new Date(project.createdAt).toLocaleDateString()}
+        />
       </div>
 
+      {/* Configuration details */}
       {config && (
         <div style={cardStyle}>
           <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Configuration</div>
@@ -139,27 +246,17 @@ export default function ProjectDetail() {
               { label: 'Language', value: config.language },
             ].map((f) => (
               <div key={f.label}>
-                <div
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: 'var(--text-muted)',
-                    textTransform: 'uppercase',
-                    marginBottom: 4,
-                  }}
-                >
+                <div style={{
+                  fontSize: 11, fontWeight: 600, color: 'var(--text-muted)',
+                  textTransform: 'uppercase', marginBottom: 4,
+                }}>
                   {f.label}
                 </div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    fontFamily: "'JetBrains Mono', monospace",
-                    padding: '8px 12px',
-                    background: 'var(--bg-primary)',
-                    borderRadius: 6,
-                    border: '1px solid var(--border)',
-                  }}
-                >
+                <div style={{
+                  fontSize: 13, fontFamily: "'JetBrains Mono', monospace",
+                  padding: '8px 12px', background: 'var(--bg-primary)',
+                  borderRadius: 6, border: '1px solid var(--border)',
+                }}>
                   {f.value}
                 </div>
               </div>
@@ -168,15 +265,16 @@ export default function ProjectDetail() {
         </div>
       )}
 
-      {results.length > 0 && (
+      {/* Results table */}
+      {hasResults && (
         <div style={{ ...cardStyle, padding: 0 }}>
-          <div
-            style={{
-              padding: '16px 20px',
-              borderBottom: '1px solid var(--border)',
-            }}
-          >
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
             <span style={{ fontSize: 15, fontWeight: 700 }}>Student Results</span>
+            {results!.runAt && (
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 10 }}>
+                Last run: {new Date(results!.runAt).toLocaleString()}
+              </span>
+            )}
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
@@ -185,13 +283,9 @@ export default function ProjectDetail() {
                   <th
                     key={h}
                     style={{
-                      padding: '12px 16px',
-                      textAlign: 'left',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: 'var(--text-muted)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
+                      padding: '12px 16px', textAlign: 'left', fontSize: 12,
+                      fontWeight: 600, color: 'var(--text-muted)',
+                      textTransform: 'uppercase', letterSpacing: '0.05em',
                     }}
                   >
                     {h}
@@ -200,32 +294,27 @@ export default function ProjectDetail() {
               </tr>
             </thead>
             <tbody>
-              {results.map((r) => (
+              {results!.students.map((s) => (
                 <tr
-                  key={r.id}
+                  key={s.studentId}
                   style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
                   onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                  onClick={() => navigate(`/projects/${project.id}/results/${r.studentId}`)}
+                  onClick={() => navigate(`/projects/${project.id}/results/${s.studentId}`)}
                 >
-                  <td
-                    style={{
-                      padding: '12px 16px',
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {r.studentId}
+                  <td style={{
+                    padding: '12px 16px',
+                    fontFamily: "'JetBrains Mono', monospace", fontWeight: 600,
+                  }}>
+                    {s.studentId}
                   </td>
                   <td style={{ padding: '12px 16px' }}>
-                    <StatusBadge status={r.status} />
+                    <StatusBadge status={s.status} />
                   </td>
                   <td style={{ padding: '12px 16px' }}>
-                    {r.outputMatched ? (
-                      <Icon name="check" size={16} color="var(--green)" />
-                    ) : (
-                      <Icon name="x" size={16} color="var(--red)" />
-                    )}
+                    {s.outputMatched
+                      ? <Icon name="check" size={16} color="var(--green)" />
+                      : <Icon name="x" size={16} color="var(--red)" />}
                   </td>
                 </tr>
               ))}
@@ -233,6 +322,38 @@ export default function ProjectDetail() {
           </table>
         </div>
       )}
+
+      {!hasResults && students.length === 0 && !loading && (
+        <div style={{ ...cardStyle, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
+          No submissions yet. Use "Import ZIPs" to add student submissions.
+        </div>
+      )}
+
+      {!hasResults && students.length > 0 && (
+        <div style={{ ...cardStyle, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
+          {students.length} student(s) imported. Click "Run Evaluation" to grade them.
+        </div>
+      )}
+
+      <ConfirmDialog
+        isOpen={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={handleDelete}
+        title="Delete Project"
+        message={`"${project.name}" projesini ve tüm dosyalarını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`}
+        confirmText="Delete"
+        confirmColor="var(--red)"
+      />
+
+      <ConfirmDialog
+        isOpen={confirmCleanup}
+        onClose={() => setConfirmCleanup(false)}
+        onConfirm={handleCleanup}
+        title="Clean Up Artifacts"
+        message="Bu işlem her öğrencinin klasöründeki kaynak dosya dışındaki tüm dosyaları (derlenmiş çıktılar vb.) siler. Devam etmek istiyor musunuz?"
+        confirmText="Clean Up"
+        confirmColor="var(--orange)"
+      />
     </div>
   );
 }

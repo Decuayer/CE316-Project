@@ -18,7 +18,9 @@ export type IconName =
   | 'terminal'
   | 'upload'
   | 'student'
-  | 'bar';
+  | 'bar'
+  | 'folder'
+  | 'trash';
 
 interface IconProps {
   name: IconName;
@@ -121,6 +123,17 @@ const paths: Record<IconName, React.ReactNode> = {
       <line x1="18" y1="20" x2="18" y2="10" />
       <line x1="12" y1="20" x2="12" y2="4" />
       <line x1="6" y1="20" x2="6" y2="14" />
+    </>
+  ),
+  folder: (
+    <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+  ),
+  trash: (
+    <>
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4h6v2" />
     </>
   ),
 };

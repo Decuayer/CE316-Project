@@ -144,6 +144,15 @@ export interface DashboardStats {
     passRate: number;
     lastRun: string | null;
   }>;
+  statusBreakdown: {
+    pass: number;
+    fail: number;
+    compile_error: number;
+    runtime_error: number;
+    timeout: number;
+    missing_source: number;
+    zip_error: number;
+  };
 }
 
 // --- Database ---

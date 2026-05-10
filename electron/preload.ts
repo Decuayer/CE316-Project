@@ -29,13 +29,34 @@ const api = {
 
   // --- Project operations [R3][R10] ---
   project: {
-    getAll: () => ipcRenderer.invoke('project:getAll'),
-    getById: (id: string) => ipcRenderer.invoke('project:getById', id),
-    create: (data: any) => ipcRenderer.invoke('project:create', data),
-    update: (id: string, data: any) => ipcRenderer.invoke('project:update', id, data),
-    delete: (id: string) => ipcRenderer.invoke('project:delete', id),
-    getResults: (id: string) => ipcRenderer.invoke('project:getResults', id),
-    getStatistics: () => ipcRenderer.invoke('project:getStatistics'),
+    getAll: async () => {
+      try { return await ipcRenderer.invoke('project:getAll'); }
+      catch (error) { console.error('IPC Error [project:getAll]:', error); throw error; }
+    },
+    getById: async (id: string) => {
+      try { return await ipcRenderer.invoke('project:getById', id); }
+      catch (error) { console.error('IPC Error [project:getById]:', error); throw error; }
+    },
+    create: async (data: any) => {
+      try { return await ipcRenderer.invoke('project:create', data); }
+      catch (error) { console.error('IPC Error [project:create]:', error); throw error; }
+    },
+    update: async (id: string, data: any) => {
+      try { return await ipcRenderer.invoke('project:update', id, data); }
+      catch (error) { console.error('IPC Error [project:update]:', error); throw error; }
+    },
+    delete: async (id: string) => {
+      try { return await ipcRenderer.invoke('project:delete', id); }
+      catch (error) { console.error('IPC Error [project:delete]:', error); throw error; }
+    },
+    getResults: async (id: string) => {
+      try { return await ipcRenderer.invoke('project:getResults', id); }
+      catch (error) { console.error('IPC Error [project:getResults]:', error); throw error; }
+    },
+    getStatistics: async () => {
+      try { return await ipcRenderer.invoke('project:getStatistics'); }
+      catch (error) { console.error('IPC Error [project:getStatistics]:', error); throw error; }
+    },
   },
 
   // --- Execution operations [R6][R7][R8] ---
