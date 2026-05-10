@@ -143,7 +143,7 @@ export class ProjectService {
     };
   }
 
-  // TODO: DEMİR CÜCÜ
+  // DONE: DEMİR CÜCÜ
   // getStatistics(): recentProjects dizisini doldur.
   // Son 5 projeyi çek, her biri için:
   //   - results tablosundan studentCount (DISTINCT studentId) hesapla
@@ -161,15 +161,39 @@ export class ProjectService {
     const totalResults = (db.prepare('SELECT count(*) as count FROM results').get() as any).count;
     const overallPassRate = totalResults > 0 ? (passes / totalResults) * 100 : 0;
 
-    // TODO: DEMİR CÜCÜ — recentProjects kısmını implement et
-    // Aşağıdaki boş diziyi dolduracak SQL sorgularını yaz.
-    // Her proje için: id, name, status, studentCount, passRate, lastRun
+    const recentProjectsRaw = db.prepare('SELECT id, name FROM projects ORDER BY updatedAt DESC LIMIT 5').all() as any[];
+
+    const recentProjects = recentProjectsRaw.map(p => {
+      const stats = db.prepare(`
+        SELECT 
+          COUNT(DISTINCT studentId) as studentCount,
+          SUM(CASE WHEN status = 'pass' THEN 1 ELSE 0 END) as passedCount,
+          MAX(runAt) as lastRun
+        FROM results 
+        WHERE projectId = ?
+      `).get(p.id) as any;
+
+      const studentCount = Number(stats.studentCount || 0);
+      const passedCount = Number(stats.passedCount || 0);
+      const passRate = studentCount > 0 ? (passedCount / studentCount) * 100 : 0;
+
+      const status: "completed" | "pending" | "in-progress" = studentCount > 0 ? 'completed' : 'pending';
+      
+      return {
+        id: String(p.id),
+        name: String(p.name),
+        status,
+        studentCount,
+        passRate,
+        lastRun: stats.lastRun ? String(stats.lastRun) : null
+      };
+    });
 
     return {
       totalProjects,
       totalStudents,
       overallPassRate,
-      recentProjects: [] 
+      recentProjects 
     };
   }
 
