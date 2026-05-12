@@ -24,3 +24,13 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: "IAE"
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64
+    - target: zip
+      arch:
+        - arm64
+  icon: build/icon.png
+  category: public.app-category.developer-tools
