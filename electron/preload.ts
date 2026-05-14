@@ -22,17 +22,6 @@ async function invoke<T = any>(channel: string, ...args: unknown[]): Promise<T> 
 // Expose typed IPC methods to the renderer process via contextBridge
 // This is the secure bridge between main and renderer processes
 //
-// Error handling sorumlulukları (modül bazlı):
-// TODO: EGE AYYILDIZ [ConfigService Modülü] — config.* çağrılarına try-catch ekle
-// TODO: ALİ EMRE AÇIKKOL [ProjectService Modülü] — project.* çağrılarına try-catch ekle
-// TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü] — execution.run/cleanup çağrılarına try-catch ekle
-// TODO: GÖRKE GÖYNÜGÜR [ZipService Modülü] — execution.importZips/getStudents çağrılarına try-catch ekle
-//
-// Örnek pattern:
-//   getAll: async () => {
-//     try { return await ipcRenderer.invoke('config:getAll'); }
-//     catch (error) { console.error('IPC Error:', error); throw error; }
-//   }
 
 const api = {
   // --- Configuration operations [R4][R5] ---
@@ -84,10 +73,10 @@ const api = {
       try { return await ipcRenderer.invoke('execution:importZips', projectId, dirPath); }
       catch (error) { console.error('IPC Error [execution:importZips]:', error); throw error; }
     },
-    run: (projectId: string) => ipcRenderer.invoke('execution:run', projectId),
+    run: (projectId: string) => invoke('execution:run', projectId),
     // Removes everything under each student folder that is NOT the source file.
     // See evaluation-flow-design.md "Clean up artifacts button".
-    cleanup: (projectId: string) => ipcRenderer.invoke('execution:cleanup', projectId),
+    cleanup: (projectId: string) => invoke('execution:cleanup', projectId),
     getStudents: async (projectId: string) => {
       try { return await ipcRenderer.invoke('execution:getStudents', projectId); }
       catch (error) { console.error('IPC Error [execution:getStudents]:', error); throw error; }
