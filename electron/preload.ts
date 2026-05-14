@@ -36,14 +36,18 @@ const api = {
 
   // --- Execution operations [R6][R7][R8] ---
   execution: {
-    importZips: (projectId: string, dirPath: string) =>
-      ipcRenderer.invoke('execution:importZips', projectId, dirPath),
+    importZips: async (projectId: string, dirPath: string) => {
+      try { return await ipcRenderer.invoke('execution:importZips', projectId, dirPath); }
+      catch (error) { console.error('IPC Error [execution:importZips]:', error); throw error; }
+    },
     run: (projectId: string) => ipcRenderer.invoke('execution:run', projectId),
     // Removes everything under each student folder that is NOT the source file.
     // See evaluation-flow-design.md "Clean up artifacts button".
     cleanup: (projectId: string) => ipcRenderer.invoke('execution:cleanup', projectId),
-    getStudents: (projectId: string) =>
-      ipcRenderer.invoke('execution:getStudents', projectId),
+    getStudents: async (projectId: string) => {
+      try { return await ipcRenderer.invoke('execution:getStudents', projectId); }
+      catch (error) { console.error('IPC Error [execution:getStudents]:', error); throw error; }
+    },
   },
 
   // --- Dialog operations ---

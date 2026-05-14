@@ -27,13 +27,14 @@ export function registerExecutionIpc(ipcMain: IpcMain, dbService: DatabaseServic
   const zipService = new ZipService();
   const executionService = new ExecutionService();
 
-  // TODO: ALİ EMRE AÇIKKOL
-  // execution:importZips handler'ına try-catch error handling ekle.
-  // Hata durumunda açıklayıcı mesaj döndür (örn: "ZIP dizini bulunamadı").
   ipcMain.handle('execution:importZips', async (_e, projectId: string, dirPath: string) => {
-    const project = await projectService.getById(projectId);
-    if (!project) throw new Error(`Project not found: ${projectId}`);
-    return zipService.extractAll(dirPath, project.submissionsDir);
+    try {
+      const project = await projectService.getById(projectId);
+      if (!project) throw new Error(`Project not found: ${projectId}`);
+      return await zipService.extractAll(dirPath, project.submissionsDir);
+    } catch (error: any) {
+      throw new Error(error?.message ?? 'ZIP dizini bulunamadı veya bir hata oluştu');
+    }
   });
 
   // TODO: ALİ EMRE AÇIKKOL
@@ -62,12 +63,14 @@ export function registerExecutionIpc(ipcMain: IpcMain, dbService: DatabaseServic
     return executionService.cleanupArtifacts(project);
   });
 
-  // TODO: ALİ EMRE AÇIKKOL
-  // execution:getStudents handler'ına try-catch ekle.
   ipcMain.handle('execution:getStudents', async (_e, projectId: string) => {
-    const project = await projectService.getById(projectId);
-    if (!project) throw new Error(`Project not found: ${projectId}`);
-    return zipService.listStudents(project.submissionsDir);
+    try {
+      const project = await projectService.getById(projectId);
+      if (!project) throw new Error(`Project not found: ${projectId}`);
+      return await zipService.listStudents(project.submissionsDir);
+    } catch (error: any) {
+      throw new Error(error?.message ?? 'Öğrenci listesi alınamadı');
+    }
   });
 }
 
