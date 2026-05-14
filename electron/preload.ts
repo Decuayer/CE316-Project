@@ -1,10 +1,33 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
+/**
+ * Wraps `ipcRenderer.invoke` so any rejection is logged with the channel
+ * name before being re-thrown to the renderer. The Error message coming
+ * from the main process is preserved verbatim (the IPC handler in
+ * `electron/ipc/config.ipc.ts` already wraps raw failures into clean
+ * Errors).
+ */
+// Default T to `any` so existing renderer-side typed wrappers in
+// `src/lib/ipc.ts` (which declare the real return type per channel)
+// continue to compile without explicit casts here.
+async function invoke<T = any>(channel: string, ...args: unknown[]): Promise<T> {
+  try {
+    return (await ipcRenderer.invoke(channel, ...args)) as T;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[ipc:${channel}]`, message);
+    throw err;
+  }
+}
 // Expose typed IPC methods to the renderer process via contextBridge
 // This is the secure bridge between main and renderer processes
-// TODO: ALİ EMRE AÇIKKOL
-// IPC çağrılarında hata yönetimi ekle.
-// Her invoke çağrısını try-catch ile sar ve hata mesajlarını renderer'a temiz şekilde ilet.
+//
+// Error handling sorumlulukları (modül bazlı):
+// TODO: EGE AYYILDIZ [ConfigService Modülü] — config.* çağrılarına try-catch ekle
+// TODO: ALİ EMRE AÇIKKOL [ProjectService Modülü] — project.* çağrılarına try-catch ekle
+// TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü] — execution.run/cleanup çağrılarına try-catch ekle
+// TODO: GÖRKE GÖYNÜGÜR [ZipService Modülü] — execution.importZips/getStudents çağrılarına try-catch ekle
+//
 // Örnek pattern:
 //   getAll: async () => {
 //     try { return await ipcRenderer.invoke('config:getAll'); }
@@ -14,24 +37,45 @@ import { contextBridge, ipcRenderer } from 'electron';
 const api = {
   // --- Configuration operations [R4][R5] ---
   config: {
-    getAll: () => ipcRenderer.invoke('config:getAll'),
-    getById: (id: string) => ipcRenderer.invoke('config:getById', id),
-    create: (config: any) => ipcRenderer.invoke('config:create', config),
-    update: (id: string, config: any) => ipcRenderer.invoke('config:update', id, config),
-    delete: (id: string) => ipcRenderer.invoke('config:delete', id),
-    import: (filePath: string) => ipcRenderer.invoke('config:import', filePath),
-    export: (id: string, targetPath: string) => ipcRenderer.invoke('config:export', id, targetPath),
+    getAll: () => invoke('config:getAll'),
+    getById: (id: string) => invoke('config:getById', id),
+    create: (config: unknown) => invoke('config:create', config),
+    update: (id: string, config: unknown) => invoke('config:update', id, config),
+    delete: (id: string) => invoke('config:delete', id),
+    import: (filePath: string) => invoke('config:import', filePath),
+    export: (id: string, targetPath: string) => invoke('config:export', id, targetPath),
   },
 
   // --- Project operations [R3][R10] ---
   project: {
-    getAll: () => ipcRenderer.invoke('project:getAll'),
-    getById: (id: string) => ipcRenderer.invoke('project:getById', id),
-    create: (data: any) => ipcRenderer.invoke('project:create', data),
-    update: (id: string, data: any) => ipcRenderer.invoke('project:update', id, data),
-    delete: (id: string) => ipcRenderer.invoke('project:delete', id),
-    getResults: (id: string) => ipcRenderer.invoke('project:getResults', id),
-    getStatistics: () => ipcRenderer.invoke('project:getStatistics'),
+    getAll: async () => {
+      try { return await ipcRenderer.invoke('project:getAll'); }
+      catch (error) { console.error('IPC Error [project:getAll]:', error); throw error; }
+    },
+    getById: async (id: string) => {
+      try { return await ipcRenderer.invoke('project:getById', id); }
+      catch (error) { console.error('IPC Error [project:getById]:', error); throw error; }
+    },
+    create: async (data: any) => {
+      try { return await ipcRenderer.invoke('project:create', data); }
+      catch (error) { console.error('IPC Error [project:create]:', error); throw error; }
+    },
+    update: async (id: string, data: any) => {
+      try { return await ipcRenderer.invoke('project:update', id, data); }
+      catch (error) { console.error('IPC Error [project:update]:', error); throw error; }
+    },
+    delete: async (id: string) => {
+      try { return await ipcRenderer.invoke('project:delete', id); }
+      catch (error) { console.error('IPC Error [project:delete]:', error); throw error; }
+    },
+    getResults: async (id: string) => {
+      try { return await ipcRenderer.invoke('project:getResults', id); }
+      catch (error) { console.error('IPC Error [project:getResults]:', error); throw error; }
+    },
+    getStatistics: async () => {
+      try { return await ipcRenderer.invoke('project:getStatistics'); }
+      catch (error) { console.error('IPC Error [project:getStatistics]:', error); throw error; }
+    },
   },
 
   // --- Execution operations [R6][R7][R8] ---
@@ -52,15 +96,14 @@ const api = {
 
   // --- Dialog operations ---
   dialog: {
-    openDirectory: () => ipcRenderer.invoke('dialog:openDirectory'),
+    openDirectory: () => invoke('dialog:openDirectory'),
     openFile: (filters?: { name: string; extensions: string[] }[]) =>
-      ipcRenderer.invoke('dialog:openFile', filters),
+      invoke('dialog:openFile', filters),
     saveFile: (defaultName: string, filters?: { name: string; extensions: string[] }[]) =>
-      ipcRenderer.invoke('dialog:saveFile', defaultName, filters),
+      invoke('dialog:saveFile', defaultName, filters),
   },
 };
 
 contextBridge.exposeInMainWorld('api', api);
 
-// Type declaration for renderer process
 export type ApiType = typeof api;

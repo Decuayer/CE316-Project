@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { cardStyle } from '@/components/shared/StatCard';
-// TODO: EGE AYYILDIZ
+// TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü]
 // 1. Mock data import'larını kaldır ve gerçek IPC kullan:
 //    import { ipc } from '@/lib/ipc';
 //    import type { Project, StudentResult } from '@shared/types';

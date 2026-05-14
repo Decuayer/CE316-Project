@@ -37,7 +37,7 @@ export function registerExecutionIpc(ipcMain: IpcMain, dbService: DatabaseServic
     }
   });
 
-  // TODO: ALİ EMRE AÇIKKOL
+  // TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü]
   // execution:run handler'ını güncelle:
   // 1. executionService.runAll(project) çağrıldıktan sonra dönen ProjectResults'ı DB'ye kaydet.
   // 2. Her StudentResult'ı results tablosuna INSERT et:
@@ -54,7 +54,7 @@ export function registerExecutionIpc(ipcMain: IpcMain, dbService: DatabaseServic
     return executionService.runAll(project);
   });
 
-  // TODO: ALİ EMRE AÇIKKOL
+  // TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü]
   // execution:cleanup handler'ına try-catch ekle.
   // Hata mesajını renderer'a ilet.
   ipcMain.handle('execution:cleanup', async (_e, projectId: string) => {

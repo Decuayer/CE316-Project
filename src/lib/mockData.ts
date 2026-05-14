@@ -1,15 +1,12 @@
-// ⚠️ TODO: EGE AYYILDIZ + GÖRKE GÖYNÜGÜR
-// Bu dosya SİLİNECEK.
+// ⚠️ TODO: Bu dosya SİLİNECEK.
 // Tüm frontend sayfaları gerçek IPC çağrılarına geçirildiğinde bu dosya tamamen kaldırılmalıdır.
-// Bağımlı dosyalar:
-//   - src/pages/Dashboard.tsx (CONFIGS, PROJECTS, RESULTS)
-//   - src/pages/Projects.tsx (PROJECTS)
-//   - src/pages/ProjectDetail.tsx (CONFIGS, PROJECTS, RESULTS)
-//   - src/pages/Configurations.tsx (CONFIGS)
-//   - src/pages/Results.tsx (PROJECTS, RESULTS, statusConfig, ResultStatus)
-//   - src/pages/StudentDetail.tsx (PROJECTS, RESULTS, ResultStatus)
-//   - src/components/shared/StatusBadge.tsx (statusConfig, ResultStatus)
-//   - src/components/shared/LangDot.tsx (langColors, LangKey)
+// Son silme sorumlusu: GÖRKE GÖYNÜGÜR [ZipService Modülü]
+//
+// Bağımlı dosyalar ve sorumluları:
+//   ALİ EMRE AÇIKKOL [ProjectService]: Dashboard.tsx, Projects.tsx, ProjectDetail.tsx
+//   EGE AYYILDIZ [ConfigService]: Configurations.tsx
+//   EGE ÇAĞAN KANTAR [ExecutionService]: Results.tsx, StudentDetail.tsx, StatusBadge.tsx
+//   EGE AYYILDIZ [ConfigService]: LangDot.tsx
 // Yukarıdaki tüm dosyalar gerçek veriye geçirildiğinde bu dosyayı silin.
 export type LangKey = 'c' | 'cpp' | 'python' | 'java' | 'haskell';
 

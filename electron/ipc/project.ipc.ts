@@ -17,32 +17,68 @@ import { DatabaseService } from '../services/DatabaseService';
  *   project:getResults    - Load saved execution results               [R9][R10]
  *   project:getStatistics - Aggregate dashboard stats
  */
-
-// TODO: ALİ EMRE AÇIKKOL
-// Tüm IPC handler'lara try-catch error handling ekle.
-// Hata durumunda renderer'a anlamlı hata mesajları ilet.
-// Özellikle project:create'de configurationId geçersizse anlaşılır hata mesajı ver.
-// Özellikle project:delete'de dosya sistemi hatalarını yakala.
 export function registerProjectIpc(ipcMain: IpcMain, dbService: DatabaseService, appDataDir: string): void {
   const projectsDir = path.join(appDataDir, 'projects');
-  const configurationsDir = path.join(appDataDir, 'configurations');
   const projectService = new ProjectService(dbService, projectsDir);
 
-  ipcMain.handle('project:getAll', async () => projectService.getAll());
+  ipcMain.handle('project:getAll', async () => {
+    try {
+      return await projectService.getAll();
+    } catch (err: any) {
+      throw new Error(`Failed to get projects: ${err.message}`);
+    }
+  });
 
-  ipcMain.handle('project:getById', async (_e, id: string) => projectService.getById(id));
+  ipcMain.handle('project:getById', async (_e, id: string) => {
+    try {
+      return await projectService.getById(id);
+    } catch (err: any) {
+      throw new Error(`Failed to get project: ${err.message}`);
+    }
+  });
 
-  ipcMain.handle('project:create', async (_e, data) => projectService.create(data));
+  ipcMain.handle('project:create', async (_e, data) => {
+    try {
+      return await projectService.create(data);
+    } catch (err: any) {
+      if (err.message.includes('bulunamadı') || err.message.includes('Configuration')) {
+        throw new Error(`Geçersiz konfigürasyon: ${err.message}`);
+      }
+      throw new Error(`Proje oluşturulamadı: ${err.message}`);
+    }
+  });
 
-  // TODO: ALİ EMRE AÇIKKOL
-  // project:update - configurationId ve id alanlarının güncellenmesini engelle.
-  // data objesinden bu alanları filtrele.
-  ipcMain.handle('project:update', async (_e, id: string, data) => projectService.update(id, data));
+  ipcMain.handle('project:update', async (_e, id: string, data) => {
+    try {
+      // id ve configurationId değiştirilemez
+      const { id: _id, configurationId: _cid, ...safeData } = data ?? {};
+      return await projectService.update(id, safeData);
+    } catch (err: any) {
+      throw new Error(`Failed to update project: ${err.message}`);
+    }
+  });
 
-  ipcMain.handle('project:delete', async (_e, id: string) => projectService.delete(id));
+  ipcMain.handle('project:delete', async (_e, id: string) => {
+    try {
+      return await projectService.delete(id);
+    } catch (err: any) {
+      throw new Error(`Proje silinemedi: ${err.message}`);
+    }
+  });
 
-  ipcMain.handle('project:getResults', async (_e, id: string) => projectService.getResults(id));
+  ipcMain.handle('project:getResults', async (_e, id: string) => {
+    try {
+      return await projectService.getResults(id);
+    } catch (err: any) {
+      throw new Error(`Failed to get results: ${err.message}`);
+    }
+  });
 
-  ipcMain.handle('project:getStatistics', async () => projectService.getStatistics());
+  ipcMain.handle('project:getStatistics', async () => {
+    try {
+      return await projectService.getStatistics();
+    } catch (err: any) {
+      throw new Error(`Failed to get statistics: ${err.message}`);
+    }
+  });
 }
-
