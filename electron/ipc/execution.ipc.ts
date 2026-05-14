@@ -22,7 +22,6 @@ import { DatabaseService } from '../services/DatabaseService';
  */
 export function registerExecutionIpc(ipcMain: IpcMain, dbService: DatabaseService, appDataDir: string): void {
   const projectsDir = path.join(appDataDir, 'projects');
-  const configurationsDir = path.join(appDataDir, 'configurations');
   const projectService = new ProjectService(dbService, projectsDir);
   const zipService = new ZipService();
   const executionService = new ExecutionService();
@@ -37,30 +36,64 @@ export function registerExecutionIpc(ipcMain: IpcMain, dbService: DatabaseServic
     }
   });
 
-  // TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü]
-  // execution:run handler'ını güncelle:
-  // 1. executionService.runAll(project) çağrıldıktan sonra dönen ProjectResults'ı DB'ye kaydet.
-  // 2. Her StudentResult'ı results tablosuna INSERT et:
-  //    INSERT INTO results (projectId, runAt, studentId, zipExtracted, sourceFound,
-  //      compiled, compileOutput, compileError, executed, executionOutput, executionError,
-  //      executionTimedOut, outputMatched, expectedOutput, actualOutput, status, timestamp)
-  //    VALUES (...)
-  // 3. Transaction kullan (db.transaction) - ya hepsi kaydedilsin ya hiçbiri.
-  // 4. try-catch ile hataları yakala ve renderer'a anlamlı hata mesajı gönder.
-  // BU KRİTİK: Sonuçlar DB'ye kaydedilmezse proje tekrar açıldığında sonuçlar kaybolur.
   ipcMain.handle('execution:run', async (_e, projectId: string) => {
-    const project = await projectService.getById(projectId);
-    if (!project) throw new Error(`Project not found: ${projectId}`);
-    return executionService.runAll(project);
+    try {
+      const project = await projectService.getById(projectId);
+      if (!project) throw new Error(`Project not found: ${projectId}`);
+
+      const results = await executionService.runAll(project);
+
+      const db = dbService.getDb();
+      const insert = db.prepare(`
+        INSERT INTO results (
+          projectId, runAt, studentId, zipExtracted, sourceFound,
+          compiled, compileOutput, compileError, executed, executionOutput, executionError,
+          executionTimedOut, outputMatched, expectedOutput, actualOutput, status, timestamp
+        ) VALUES (
+          @projectId, @runAt, @studentId, @zipExtracted, @sourceFound,
+          @compiled, @compileOutput, @compileError, @executed, @executionOutput, @executionError,
+          @executionTimedOut, @outputMatched, @expectedOutput, @actualOutput, @status, @timestamp
+        )
+      `);
+
+      db.transaction(() => {
+        for (const student of results.students) {
+          insert.run({
+            projectId: results.projectId,
+            runAt: results.runAt,
+            studentId: student.studentId,
+            zipExtracted: student.zipExtracted ? 1 : 0,
+            sourceFound: student.sourceFound ? 1 : 0,
+            compiled: student.compiled ? 1 : 0,
+            compileOutput: student.compileOutput ?? '',
+            compileError: student.compileError ?? null,
+            executed: student.executed ? 1 : 0,
+            executionOutput: student.executionOutput ?? '',
+            executionError: student.executionError ?? null,
+            executionTimedOut: student.executionTimedOut ? 1 : 0,
+            outputMatched: student.outputMatched ? 1 : 0,
+            expectedOutput: student.expectedOutput ?? '',
+            actualOutput: student.actualOutput ?? '',
+            status: student.status,
+            timestamp: student.timestamp,
+          });
+        }
+      })();
+
+      return results;
+    } catch (error: any) {
+      throw new Error(error?.message ?? 'Execution failed');
+    }
   });
 
-  // TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü]
-  // execution:cleanup handler'ına try-catch ekle.
-  // Hata mesajını renderer'a ilet.
   ipcMain.handle('execution:cleanup', async (_e, projectId: string) => {
-    const project = await projectService.getById(projectId);
-    if (!project) throw new Error(`Project not found: ${projectId}`);
-    return executionService.cleanupArtifacts(project);
+    try {
+      const project = await projectService.getById(projectId);
+      if (!project) throw new Error(`Project not found: ${projectId}`);
+      return executionService.cleanupArtifacts(project);
+    } catch (error: any) {
+      throw new Error(error?.message ?? 'Cleanup failed');
+    }
   });
 
   ipcMain.handle('execution:getStudents', async (_e, projectId: string) => {
@@ -73,4 +106,3 @@ export function registerExecutionIpc(ipcMain: IpcMain, dbService: DatabaseServic
     }
   });
 }
-

@@ -31,97 +31,169 @@ const execFileAsync = promisify(execFile);
 export class ExecutionService {
   private fileService = new FileService();
 
-  // TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü]
-  // runAll(): Tüm öğrencileri sırayla işle.
-  // 1. project.submissionsDir altındaki tüm alt klasörleri listele (FileService.listDirs)
-  //    Her klasör adı = studentId
-  // 2. Her öğrenci için:
-  //    const studentDir = path.join(project.submissionsDir, studentId)
-  //    const result = await this.runStudent(studentDir, project)
-  //    result'ı students dizisine ekle
-  // 3. Toplam sonucu döndür:
-  //    { projectId: project.id, runAt: new Date().toISOString(), students: StudentResult[] }
-  // NOT: Bir öğrenci hata verse bile döngü devam etmeli (runStudent zaten catch yapıyor)
-  async runAll(_project: Project): Promise<ProjectResults> {
-    void this.fileService;
-    void execFileAsync;
-    throw new Error('Not implemented: ExecutionService.runAll');
+  async runAll(project: Project): Promise<ProjectResults> {
+    const studentIds = await this.fileService.listDirs(project.submissionsDir);
+    const runAt = new Date().toISOString();
+    const students: StudentResult[] = [];
+
+    for (const studentId of studentIds) {
+      const studentDir = path.join(project.submissionsDir, studentId);
+      const result = await this.runStudent(studentDir, project);
+      students.push(result);
+    }
+
+    return { projectId: project.id, runAt, students };
   }
 
-  // TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü]
-  // runStudent(): Tek bir öğrencinin compile -> run -> compare pipeline'ını çalıştır.
-  // ÖNEMLİ: Bu metod ASLA throw etmemeli. Tüm hatalar StudentResult'a kaydedilmeli.
-  //
-  // Adımlar:
-  // 1. studentId = path.basename(studentDir)
-  // 2. Kaynak dosya kontrolü: configuration.sourceFileExpected dosyası var mı?
-  //    - Yoksa: status='missing_source', erken dön
-  // 3. Compile (sadece configuration.compileCommand varsa):
-  //    - buildArgv ile compileArgs'ı tokenize et
-  //    - execFileAsync(compileCommand, args, { cwd: studentDir, timeout: 10000 })
-  //    - Hata: status='compile_error', compileOutput/compileError doldur
-  //    - ENOENT: "compiler not found: <cmd>"
-  // 4. Input çözümle: resolveDataSource(project.input) -> parseInputToArgv(raw) -> argvFromInput
-  // 5. Run:
-  //    - buildArgv ile runArgs'ı tokenize et
-  //    - execFileAsync(runCommand, finalArgv, { cwd: studentDir, timeout: 10000 })
-  //    - Timeout: status='timeout', "killed after 10s"
-  //    - Hata: status='runtime_error'
-  // 6. Expected output çözümle: resolveDataSource(project.expectedOutput)
-  // 7. Karşılaştır: actualStdout.trim() === expectedString.trim()
-  //    - Eşleşiyorsa: status='pass'
-  //    - Eşleşmiyorsa: status='fail'
-  // 8. Tam doldurulmuş StudentResult döndür
-  async runStudent(_studentDir: string, _project: Project): Promise<StudentResult> {
-    throw new Error('Not implemented: ExecutionService.runStudent');
+  async runStudent(studentDir: string, project: Project): Promise<StudentResult> {
+    const studentId = path.basename(studentDir);
+    const timestamp = new Date().toISOString();
+    const { configuration } = project;
+    const sourceFile = configuration.sourceFileExpected;
+    const outputName = path.basename(sourceFile, path.extname(sourceFile));
+    const sourcePath = path.join(studentDir, sourceFile);
+
+    const base = {
+      studentId,
+      zipExtracted: true,
+      sourceFound: false,
+      compiled: false,
+      compileOutput: '',
+      compileError: undefined as string | undefined,
+      executed: false,
+      executionOutput: '',
+      executionError: undefined as string | undefined,
+      executionTimedOut: false,
+      outputMatched: false,
+      expectedOutput: '',
+      actualOutput: '',
+      timestamp,
+    };
+
+    const sourceExists = await this.fileService.exists(sourcePath);
+    if (!sourceExists) {
+      return { ...base, status: 'missing_source' as const };
+    }
+    base.sourceFound = true;
+
+    if (configuration.compileCommand) {
+      const compileArgv = this.buildArgv(configuration.compileArgs, sourceFile, outputName, []);
+      try {
+        const { stdout, stderr } = await execFileAsync(
+          configuration.compileCommand,
+          compileArgv,
+          { cwd: studentDir, timeout: 10000 },
+        );
+        base.compileOutput = stdout + stderr;
+        base.compiled = true;
+      } catch (err: any) {
+        base.compileOutput = err.stdout ?? '';
+        base.compileError = err.code === 'ENOENT'
+          ? `compiler not found: ${configuration.compileCommand}`
+          : (err.stderr ?? err.message ?? String(err));
+        return { ...base, status: 'compile_error' as const };
+      }
+    } else {
+      base.compiled = true;
+    }
+
+    let argvFromInput: string[] = [];
+    try {
+      const rawInput = await this.resolveDataSource(project.input);
+      argvFromInput = this.parseInputToArgv(rawInput);
+    } catch (err: any) {
+      base.executionError = `Failed to resolve input: ${err.message ?? String(err)}`;
+      return { ...base, status: 'runtime_error' as const };
+    }
+
+    const runArgv = this.buildArgv(configuration.runArgs, sourceFile, outputName, argvFromInput);
+    let actualOutput = '';
+    try {
+      const { stdout } = await execFileAsync(
+        configuration.runCommand,
+        runArgv,
+        { cwd: studentDir, timeout: 10000 },
+      );
+      actualOutput = stdout;
+      base.executed = true;
+      base.executionOutput = actualOutput;
+    } catch (err: any) {
+      const timedOut = err.killed === true || err.signal === 'SIGTERM' || err.code === 'ETIMEDOUT';
+      base.executionTimedOut = timedOut;
+      base.executionOutput = err.stdout ?? '';
+      base.executionError = timedOut ? 'killed after 10s' : (err.stderr ?? err.message ?? String(err));
+      return { ...base, status: timedOut ? 'timeout' as const : 'runtime_error' as const };
+    }
+
+    let expectedOutput = '';
+    try {
+      expectedOutput = await this.resolveDataSource(project.expectedOutput);
+    } catch (err: any) {
+      base.executionError = `Failed to resolve expected output: ${err.message ?? String(err)}`;
+      return { ...base, status: 'runtime_error' as const };
+    }
+
+    base.expectedOutput = expectedOutput;
+    base.actualOutput = actualOutput;
+    const matched = actualOutput.trim() === expectedOutput.trim();
+    base.outputMatched = matched;
+
+    return { ...base, status: matched ? 'pass' as const : 'fail' as const };
   }
 
-  // TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü]
-  // cleanupArtifacts(): Her öğrenci klasöründeki gereksiz dosyaları sil.
-  // 1. project.submissionsDir altındaki tüm öğrenci klasörlerini listele
-  // 2. Her klasörde: configuration.sourceFileExpected HARİÇ tüm dosyaları sil
-  // 3. Klasör yapısını koru, sadece dosyaları sil
-  // Kullanım: "Clean up artifacts" butonu (ProjectDetail sayfasında)
-  async cleanupArtifacts(_project: Project): Promise<void> {
-    throw new Error('Not implemented: ExecutionService.cleanupArtifacts');
+  async cleanupArtifacts(project: Project): Promise<void> {
+    const studentIds = await this.fileService.listDirs(project.submissionsDir);
+    const sourceFile = project.configuration.sourceFileExpected;
+
+    for (const studentId of studentIds) {
+      const studentDir = path.join(project.submissionsDir, studentId);
+      const files = await this.fileService.listFiles(studentDir);
+      for (const file of files) {
+        if (file !== sourceFile) {
+          await this.fileService.deleteFile(path.join(studentDir, file));
+        }
+      }
+    }
   }
 
   // -------------- internal helpers --------------
 
-  // TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü]
-  // buildArgv(): Template değişkenlerini yerine koy ve argv dizisi oluştur.
-  // 1. template undefined veya boşsa [] döndür
-  // 2. Template'i whitespace'e göre split et -> token dizisi
-  // 3. Her token için:
-  //    - '{{args}}' ise: argvFromInput'un tüm elemanlarını SPREAD et
-  //    - Diğer: {{sourceFile}} ve {{outputName}} değerlerini string replace yap
-  // 4. Sonuç string[] döndür (doğrudan execFile'a verilecek, shell yok)
   private buildArgv(
-    _template: string | undefined,
-    _sourceFile: string,
-    _outputName: string,
-    _argvFromInput: string[],
+    template: string | undefined,
+    sourceFile: string,
+    outputName: string,
+    argvFromInput: string[],
   ): string[] {
-    throw new Error('Not implemented: ExecutionService.buildArgv');
+    if (!template || !template.trim()) return [];
+
+    const tokens = template.trim().split(/\s+/);
+    const result: string[] = [];
+
+    for (const token of tokens) {
+      if (token === '{{args}}') {
+        result.push(...argvFromInput);
+      } else {
+        result.push(
+          token
+            .replace(/\{\{sourceFile\}\}/g, sourceFile)
+            .replace(/\{\{outputName\}\}/g, outputName),
+        );
+      }
+    }
+
+    return result;
   }
 
-  // TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü]
-  // resolveDataSource(): DataSource'u string içeriğe çevir.
-  // - type === 'text': doğrudan source.value döndür
-  // - type === 'file': fs.readFile(source.path, 'utf-8') ile oku ve döndür
-  // - Hatalar caller'a yansısın (pipeline status olarak kaydeder)
-  private async resolveDataSource(_source: DataSource): Promise<string> {
-    throw new Error('Not implemented: ExecutionService.resolveDataSource');
+  private async resolveDataSource(source: DataSource): Promise<string> {
+    if (source.type === 'text') return source.value;
+    return fs.readFile(source.path, 'utf-8');
   }
 
-  // TODO: EGE ÇAĞAN KANTAR [ExecutionService Modülü]
-  // parseInputToArgv(): Input string'ini argv elemanlarına ayır.
-  // 1. '\n' ile split et
-  // 2. Her satırdan sondaki '\r' karakterini temizle
-  // 3. Son satır boşsa kaldır ("a\nb\n" -> ["a","b"], ["a","b",""] değil)
-  // 4. Satır içi boşluklar korunur - her satır TEK bir argv elemanı olur
-  private parseInputToArgv(_raw: string): string[] {
-    throw new Error('Not implemented: ExecutionService.parseInputToArgv');
+  private parseInputToArgv(raw: string): string[] {
+    const lines = raw.split('\n').map(l => l.replace(/\r$/, ''));
+    if (lines.length > 0 && lines[lines.length - 1] === '') {
+      lines.pop();
+    }
+    return lines;
   }
 }
-
