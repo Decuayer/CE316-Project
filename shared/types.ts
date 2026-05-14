@@ -5,6 +5,14 @@
 // 2. DashboardStats tipinin Dashboard sayfasının ihtiyaçlarını karşıladığını doğrula
 // 3. Project tipindeki 'configuration' alanının getAll'da doldurulup doldurulmadığını kontrol et
 //    (şu an sadece getById'de dolduruluyor - Ege Çağan ile koordine et)
+//
+// TODO: GÖRKE GÖYNÜGÜR [Results Modülü]
+// 4. StudentResult'a eklenen `note` ve `score` alanlarını DatabaseService'e yansıt:
+//    - results tablosuna `note TEXT` ve `score REAL` sütunları ekle (nullable)
+//    - Mevcut kayıtlar için varsayılan değer: NULL
+// 5. `result:update` IPC kanalını aktive et (aşağıdaki IpcChannels içinde TODO olarak işaretlendi):
+//    - ProjectService.updateStudentResult(projectId, studentId, patch) metodunu yaz
+//    - project.ipc.ts içinde handler'ı kaydet
 
 // --- Configuration [R4][R5] ---
 
@@ -87,6 +95,14 @@ export interface StudentResult {
 
   status: StudentStatus;
   timestamp: string;
+
+  // --- Instructor annotations (Results Modülü) ---
+  // TODO: GÖRKE GÖYNÜGÜR [Results Modülü]
+  // Bu alanlar results tablosuna eklendikten sonra aktive edilecek.
+  // DatabaseService'de `note TEXT` ve `score REAL` sütunları oluşturulmalı.
+  // ProjectService.updateStudentResult() metodunu yazmadan önce bu TODO'yu kaldırma.
+  note?: string;                   // Instructor note (free text)
+  score?: number;                  // Instructor score (0–100 range suggested)
 }
 
 export interface ProjectResults {
@@ -114,6 +130,16 @@ export interface IpcChannels {
   'project:update': (id: string, data: Partial<Project>) => Promise<Project>;
   'project:delete': (id: string) => Promise<void>;
   'project:getResults': (id: string) => Promise<ProjectResults | null>;
+
+  // TODO: GÖRKE GÖYNÜGÜR [Results Modülü]
+  // Bu kanal henüz implement edilmedi. Aşağıdaki adımları tamamladıktan sonra aktive et:
+  // 1. StudentResult tipine `note` ve `score` alanlarını DB'ye yansıt (yukarıdaki TODO)
+  // 2. ProjectService'e updateStudentResult(projectId: string, studentId: string, patch: { note?: string; score?: number }) metodu ekle
+  // 3. electron/ipc/project.ipc.ts içinde 'result:update' handler'ını kaydet
+  // 4. electron/preload.ts içinde 'result:update' kanalını expose et
+  // 5. src/lib/ipc.ts içinde result.update() helper'ını ekle
+  // 6. ResultsStudentDetail.tsx içindeki TODO'yu kaldırarak save fonksiyonunu aktive et
+  // 'result:update': (projectId: string, studentId: string, patch: { note?: string; score?: number }) => Promise<StudentResult>;
   'project:getStatistics': () => Promise<DashboardStats>;
 
   // Execution operations [R6][R7][R8]
