@@ -1,6 +1,12 @@
-// TODO: GÖRKE GÖYNÜGÜR [Results Modülü]
+// TODO: GÖRKE GÖYNÜGÜR [Results Modülü] — Frontend IPC Bağlantısı
 // Bu bileşen şu an mockData kullanıyor. Gerçek IPC'ye geçiş için:
 //
+// ÖN KOŞUL: DEMİR CÜCÜ'nün [FileService + Infra] görevlerini tamamlamasını bekle:
+//   - shared/types.ts içindeki StudentStatus (küçük harf) ve ResultStatus (büyük harf)
+//     uyumsuzluğunun çözülmüş olması: StatusBadge, StudentStatus tipini kabul etmeli
+//   - IpcChannels'daki 'result:update' kanal imzasının aktive edilmiş olması
+//
+// Bu ön koşul sağlandıktan sonra:
 // 1. Mock import'larını kaldır:
 //    - PROJECTS, RESULTS, statusConfig, type ResultStatus import'larını sil
 //
@@ -9,17 +15,17 @@
 //    import type { Project, ProjectResults, StudentResult, StudentStatus } from '@shared/types';
 //
 // 3. `load()` fonksiyonunu implement et (useEffect içinde çağır):
-//    const project = await ipc.project.getById(id!);      → setProject(project)
-//    const results = await ipc.project.getResults(id!);   → setResults(results)
+//    const project = await ipc.project.getById(projectId!);      → setProject(project)
+//    const results = await ipc.project.getResults(projectId!);   → setResults(results)
 //    Hata durumunda console.error ile logla, loading'i false yap.
 //
 // 4. Filtre değerlerini StudentStatus tipiyle uyumlu hale getir:
 //    'pass' | 'fail' | 'compile_error' | 'runtime_error' | 'timeout' | 'missing_source' | 'zip_error'
-//    (Şu an MockResult.status = 'PASS' | 'FAIL' | ... — büyük harf, gerçekte küçük harf)
+//    (Filtre buton label'ları için küçük harf eşleşmesi yap)
 //
 // 5. Tablo satırındaki onClick'i gerçek navigasyon rotasıyla güncelle:
-//    navigate(`/results/${project.id}/${student.studentId}`)
-//    (Zaten bu şekilde, sadece student tipini StudentResult olarak değiştir)
+//    navigate(`/results/${project.id}/${student.studentId}`)  ← zaten bu şekilde
+//    sadece student tipini StudentResult olarak değiştir
 //
 // 6. StatusBadge'e gönderilen `status` değerinin StudentStatus tipinde olduğundan emin ol.
 //

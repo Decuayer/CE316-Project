@@ -1,5 +1,13 @@
-// TODO: GÖRKE GÖYNÜGÜR [Results Modülü]
-// Bu bileşen şu an mockData kullanıyor. Gerçek IPC'ye geçiş için:
+// ─── TODO: DEMİR CÜCÜ [FileService + Infra Modülü] — Ön Koşul ───────────────
+// Aşağıdaki GÖRKE GÖYNÜGÜR görevleri başlamadan önce tamamlanmalı:
+//
+// 1. shared/types.ts → DATABASE_SCHEMA sabitine `note TEXT` ve `score REAL` sütunlarını ekle
+// 2. shared/types.ts → IpcChannels içindeki 'result:update' kanal imzasını uncomment et
+//    (satır: // 'result:update': (projectId, studentId, patch) => Promise<StudentResult>)
+// Tamamlandığında GÖRKE GÖYNÜGÜR'ü bilgilendir.
+//
+// ─── TODO: GÖRKE GÖYNÜGÜR [Results Modülü] — Frontend + Backend Implementasyonu ─
+// DEMİR CÜCÜ yukarıdaki ön koşulları tamamladıktan sonra:
 //
 // 1. Mock import'larını kaldır:
 //    - PROJECTS, RESULTS import'larını sil
@@ -17,31 +25,29 @@
 //    const student = r?.students.find(s => s.studentId === studentId) ?? null;
 //    setResult(student);
 //
-// 4. `handleSave()` fonksiyonunu implement et:
-//    - `result:update` IPC kanalı aktive edildikten sonra (shared/types.ts'deki TODO'ya bak):
-//      await ipc.result.update(projectId!, studentId!, { note, score });
-//    - Başarı durumunda bir toast veya "Saved" animasyonu göster
+// 4. `handleSave()` fonksiyonunu implement et (result:update kanalı aktive olduktan sonra):
+//    - await ipc.result.update(projectId!, studentId!, { note, score: Number(score) });
+//    - Başarı durumunda bir toast veya "Saved ✓" animasyonu göster
 //    - Hata durumunda console.error ile logla ve kullanıcıya alert göster
 //
-// 5. Pipeline steps'ini gerçek StudentResult alanlarıyla bağla:
-//    steps dizisinin her bir adımı için ilgili boolean alanını kullan:
-//    - 'Extracted': result.zipExtracted
+// 5. Pipeline steps'ini gerçek StudentResult boolean alanlarıyla bağla:
+//    - 'Extracted':   result.zipExtracted
 //    - 'Source Found': result.sourceFound
-//    - 'Compiled': result.compiled
-//    - 'Executed': result.executed
-//    - 'Matched': result.outputMatched
+//    - 'Compiled':    result.compiled
+//    - 'Executed':    result.executed
+//    - 'Matched':     result.outputMatched
 //
 // 6. Code bloklarında gerçek verileri göster:
-//    - Compile Output: result.compileOutput (string)
-//    - Compile Error: result.compileError (string | undefined)
-//    - Execution Output: result.executionOutput (string)
-//    - Execution Error: result.executionError (string | undefined)
-//    - Expected Output: result.expectedOutput (string)
-//    - Actual Output: result.actualOutput (string)
+//    - Compile Output:   result.compileOutput
+//    - Compile Error:    result.compileError (varsa kırmızı)
+//    - Execution Output: result.executionOutput
+//    - Execution Error:  result.executionError (varsa kırmızı)
+//    - Expected Output:  result.expectedOutput
+//    - Actual Output:    result.actualOutput
 //
-// 7. Not ve puan alanlarını gerçek veriye bağla:
-//    - `note` state'ini result.note ?? '' ile başlat
-//    - `score` state'ini result.score ?? 0 ile başlat
+// 7. Not ve puan state'lerini gerçek veriye bağla:
+//    - `note`  state'ini result.note ?? '' ile başlat
+//    - `score` state'ini result.score ?? '' ile başlat
 
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';

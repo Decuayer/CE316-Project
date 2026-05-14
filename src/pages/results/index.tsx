@@ -1,6 +1,11 @@
-// TODO: GÖRKE GÖYNÜGÜR [Results Modülü]
+// TODO: GÖRKE GÖYNÜGÜR [Results Modülü] — Frontend IPC Bağlantısı
 // Bu bileşen şu an mockData kullanıyor. Gerçek IPC'ye geçiş için:
 //
+// ÖN KOŞUL: DEMİR CÜCÜ'nün [FileService + Infra] görevlerini tamamlamasını bekle:
+//   - shared/types.ts içindeki DATABASE_SCHEMA'nın `note` ve `score` sütunlarını içermesi
+//   - IpcChannels'daki 'result:update' kanal imzasının aktive edilmiş olması
+//
+// Bu ön koşul sağlandıktan sonra:
 // 1. Mock import'larını kaldır:
 //    - PROJECTS, RESULTS, statusConfig, type ResultStatus import'larını sil
 //

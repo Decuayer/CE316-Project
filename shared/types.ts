@@ -5,14 +5,13 @@
 // 2. DashboardStats tipinin Dashboard sayfasının ihtiyaçlarını karşıladığını doğrula
 // 3. Project tipindeki 'configuration' alanının getAll'da doldurulup doldurulmadığını kontrol et
 //    (şu an sadece getById'de dolduruluyor - Ege Çağan ile koordine et)
-//
-// TODO: GÖRKE GÖYNÜGÜR [Results Modülü]
-// 4. StudentResult'a eklenen `note` ve `score` alanlarını DatabaseService'e yansıt:
+// 4. StudentResult'a eklenen `note` ve `score` alanlarını DatabaseService'e yansıt (Infra görevi):
 //    - results tablosuna `note TEXT` ve `score REAL` sütunları ekle (nullable)
 //    - Mevcut kayıtlar için varsayılan değer: NULL
-// 5. `result:update` IPC kanalını aktive et (aşağıdaki IpcChannels içinde TODO olarak işaretlendi):
-//    - ProjectService.updateStudentResult(projectId, studentId, patch) metodunu yaz
-//    - project.ipc.ts içinde handler'ı kaydet
+//    - DATABASE_SCHEMA sabitini bu dosyanın altında güncelle
+// 5. IpcChannels içindeki 'result:update' kanal imzasını aktive et (tip tanımı Infra görevi):
+//    - Yoruma alınmış satırı uncomment et
+//    - Kanal imzası: (projectId, studentId, patch) => Promise<StudentResult>
 
 // --- Configuration [R4][R5] ---
 
@@ -97,10 +96,12 @@ export interface StudentResult {
   timestamp: string;
 
   // --- Instructor annotations (Results Modülü) ---
-  // TODO: GÖRKE GÖYNÜGÜR [Results Modülü]
-  // Bu alanlar results tablosuna eklendikten sonra aktive edilecek.
-  // DatabaseService'de `note TEXT` ve `score REAL` sütunları oluşturulmalı.
-  // ProjectService.updateStudentResult() metodunu yazmadan önce bu TODO'yu kaldırma.
+  //
+  // TODO: DEMİR CÜCÜ [FileService + Infra Modülü]
+  // Bu alanlar için veritabanı şemasını güncelle (bu dosyanın altındaki DATABASE_SCHEMA sabiti):
+  //   - results tablosuna `note TEXT` ve `score REAL` sütunlarını ekle
+  //   - Her ikisi de nullable; mevcut kayıtlar için varsayılan değer NULL
+  //   - Şemayı güncelledikten sonra GÖRKE GÖYNÜGÜR'ü bilgilendir (backend handler sıradaki adım)
   note?: string;                   // Instructor note (free text)
   score?: number;                  // Instructor score (0–100 range suggested)
 }
@@ -131,15 +132,20 @@ export interface IpcChannels {
   'project:delete': (id: string) => Promise<void>;
   'project:getResults': (id: string) => Promise<ProjectResults | null>;
 
-  // TODO: GÖRKE GÖYNÜGÜR [Results Modülü]
-  // Bu kanal henüz implement edilmedi. Aşağıdaki adımları tamamladıktan sonra aktive et:
-  // 1. StudentResult tipine `note` ve `score` alanlarını DB'ye yansıt (yukarıdaki TODO)
-  // 2. ProjectService'e updateStudentResult(projectId: string, studentId: string, patch: { note?: string; score?: number }) metodu ekle
-  // 3. electron/ipc/project.ipc.ts içinde 'result:update' handler'ını kaydet
-  // 4. electron/preload.ts içinde 'result:update' kanalını expose et
-  // 5. src/lib/ipc.ts içinde result.update() helper'ını ekle
-  // 6. ResultsStudentDetail.tsx içindeki TODO'yu kaldırarak save fonksiyonunu aktive et
+  // TODO: DEMİR CÜCÜ [FileService + Infra Modülü] — Adım 1: Tip imzasını aktive et
+  // DEMİR CÜCÜ: DATABASE_SCHEMA ve yukarıdaki `note`/`score` şemasını tamamladıktan sonra
+  // aşağıdaki satırı uncomment et ve bu TODO bloğunu kaldır.
+  // Kanal imzası hazır — backend implementasyonu GÖRKE GÖYNÜGÜR'e ait (aşağıdaki TODO).
   // 'result:update': (projectId: string, studentId: string, patch: { note?: string; score?: number }) => Promise<StudentResult>;
+  //
+  // TODO: GÖRKE GÖYNÜGÜR [Results Modülü] — Adım 2: Backend implementasyonu
+  // DEMİR CÜCÜ yukarıdaki tip imzasını aktive ettikten sonra aşağıdakileri yap:
+  // 1. electron/services/ProjectService.ts'e updateStudentResult() metodu ekle:
+  //    updateStudentResult(projectId: string, studentId: string, patch: { note?: string; score?: number }): StudentResult
+  // 2. electron/ipc/project.ipc.ts içinde 'result:update' IPC handler'ını kaydet
+  // 3. electron/preload.ts içinde 'result:update' kanalını contextBridge ile expose et
+  // 4. src/lib/ipc.ts içine result.update() helper'ını ekle
+  // 5. ResultsStudentDetail.tsx içindeki handleSave() TODO'sunu kaldırarak fonksiyonu aktive et
   'project:getStatistics': () => Promise<DashboardStats>;
 
   // Execution operations [R6][R7][R8]
