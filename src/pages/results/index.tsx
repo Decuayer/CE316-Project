@@ -1,98 +1,83 @@
-// TODO: GÖRKE GÖYNÜGÜR [Results Modülü] — Frontend IPC Bağlantısı
-// Bu bileşen şu an mockData kullanıyor. Gerçek IPC'ye geçiş için:
-//
-// ÖN KOŞUL: DEMİR CÜCÜ'nün [FileService + Infra] görevlerini tamamlamasını bekle:
-//   - shared/types.ts içindeki DATABASE_SCHEMA'nın `note` ve `score` sütunlarını içermesi
-//   - IpcChannels'daki 'result:update' kanal imzasının aktive edilmiş olması
-//
-// Bu ön koşul sağlandıktan sonra:
-// 1. Mock import'larını kaldır:
-//    - PROJECTS, RESULTS, statusConfig, type ResultStatus import'larını sil
-//
-// 2. Gerçek import'ları ekle:
-//    import { ipc } from '@/lib/ipc';
-//    import type { Project, ProjectResults } from '@shared/types';
-//
-// 3. `loadProjects()` fonksiyonunu implement et:
-//    - ipc.project.getAll() ile tüm projeleri çek → setProjects(data)
-//    - Her proje için ipc.project.getResults(p.id) çağır (paralel: Promise.all)
-//    - Sonuçları { projectId → ProjectResults } şeklinde bir Map'te sakla → setResultsMap(map)
-//    - Hata durumunda console.error ile logla, loading state'i false yap
-//
-// 4. Proje kartındaki istatistikleri gerçek veriden hesapla:
-//    - Öğrenci sayısı: resultsMap.get(p.id)?.students.length ?? 0
-//    - Pass count:     resultsMap.get(p.id)?.students.filter(s => s.status === 'pass').length ?? 0
-//    - Pass rate:      passCount / studentCount * 100
-//    - Son çalıştırma: resultsMap.get(p.id)?.runAt ?? null
-//
-// 5. Proje durumu (badge) için:
-//    - Eğer resultsMap.get(p.id) null ise → 'pending'
-//    - Değilse → 'evaluated'
-//
-// 6. Sort fonksiyonlarını (sortByName, sortByDate, sortByPassRate) gerçek Project tipiyle uyumlu hale getir:
-//    - MockProject yerine Project tipini kullan
-//    - createdAt zaten string ISO date, doğrudan karşılaştırılabilir
+// [GÖRKE GÖYNÜGÜR — TAMAMLANDI]
+// Bu bileşen gerçek IPC'ye geçirildi.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { ipc } from '@/lib/ipc';
+import type { Project, ProjectResults } from '@shared/types';
 import { Icon } from '@/components/shared/Icon';
 import { LangDot } from '@/components/shared/LangDot';
 import { cardStyle } from '@/components/shared/StatCard';
-import { StatusBadge } from '@/components/shared/StatusBadge';
-import { PROJECTS, RESULTS, statusConfig, type ResultStatus } from '@/lib/mockData';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type SortKey = 'name' | 'date' | 'passRate';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/**
- * Verilen projeye ait öğrenci sonuçlarını mockData'dan hesaplar.
- *
- * TODO: GÖRKE GÖYNÜGÜR — Bunu resultsMap.get(projectId) ile değiştir.
- */
-function getProjectStats(projectId: string) {
-  const projectResults = RESULTS.filter((r) => r.projectId === projectId);
-  const total = projectResults.length;
-  const passCount = projectResults.filter((r) => r.status === 'PASS').length;
+function getStats(results: ProjectResults | undefined) {
+  if (!results) return { total: 0, passCount: 0, passRate: 0 };
+  const total = results.students.length;
+  const passCount = results.students.filter((s) => s.status === 'pass').length;
   const passRate = total > 0 ? Math.round((passCount / total) * 100) : 0;
   return { total, passCount, passRate };
 }
 
-/**
- * Projeleri verilen sıralama anahtarına göre sıralar.
- *
- * TODO: GÖRKE GÖYNÜGÜR — Parametre tipini MockProject'ten Project'e güncelle.
- */
-function sortProjects(projects: typeof PROJECTS, key: SortKey): typeof PROJECTS {
+function sortProjects(
+  projects: Project[],
+  key: SortKey,
+  resultsMap: Map<string, ProjectResults>
+): Project[] {
   return [...projects].sort((a, b) => {
     if (key === 'name') return a.name.localeCompare(b.name);
     if (key === 'date') return b.createdAt.localeCompare(a.createdAt);
     if (key === 'passRate') {
-      return getProjectStats(b.id).passRate - getProjectStats(a.id).passRate;
+      return getStats(resultsMap.get(b.id)).passRate - getStats(resultsMap.get(a.id)).passRate;
     }
     return 0;
   });
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ResultsIndex() {
   const navigate = useNavigate();
   const [sortKey, setSortKey] = useState<SortKey>('date');
 
-  // TODO: GÖRKE GÖYNÜGÜR — useState'leri gerçek veriye geçirince buraya ekle:
-  // const [projects, setProjects] = useState<Project[]>([]);
-  // const [resultsMap, setResultsMap] = useState<Map<string, ProjectResults>>(new Map());
-  // const [loading, setLoading] = useState(true);
-  //
-  // useEffect(() => { loadProjects(); }, []);
-  //
-  // async function loadProjects() { ... }
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [resultsMap, setResultsMap] = useState<Map<string, ProjectResults>>(new Map());
+  const [loading, setLoading] = useState(true);
 
-  const sorted = sortProjects(PROJECTS, sortKey);
+  useEffect(() => {
+    async function loadProjects() {
+      setLoading(true);
+      try {
+        const all = await ipc.project.getAll();
+        setProjects(all);
+
+        // Load results for every project in parallel
+        const entries = await Promise.all(
+          all.map(async (p) => {
+            const r = await ipc.project.getResults(p.id);
+            return [p.id, r] as const;
+          })
+        );
+        const map = new Map<string, ProjectResults>();
+        for (const [id, r] of entries) {
+          if (r) map.set(id, r);
+        }
+        setResultsMap(map);
+      } catch (err) {
+        console.error('ResultsIndex: load failed', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProjects();
+  }, []);
+
+  const sorted = sortProjects(projects, sortKey, resultsMap);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -131,20 +116,12 @@ export default function ResultsIndex() {
       </div>
 
       {/* Summary stat row */}
-      <SummaryBar />
+      <SummaryBar projects={projects} resultsMap={resultsMap} loading={loading} />
 
       {/* Project cards */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {sorted.map((project) => (
-          <ProjectCard
-            key={project.id}
-            project={project}
-            onClick={() => navigate(`/results/${project.id}`)}
-          />
-        ))}
-      </div>
-
-      {sorted.length === 0 && (
+      {loading ? (
+        <div style={{ color: 'var(--text-muted)', fontSize: 14, padding: 24 }}>Loading…</div>
+      ) : sorted.length === 0 ? (
         <div
           style={{
             ...cardStyle,
@@ -156,34 +133,45 @@ export default function ResultsIndex() {
         >
           No projects found. Create a project first.
         </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {sorted.map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              results={resultsMap.get(project.id) ?? null}
+              onClick={() => navigate(`/results/${project.id}`)}
+            />
+          ))}
+        </div>
       )}
     </div>
   );
 }
 
-// ─── SummaryBar ───────────────────────────────────────────────────────────────
+// ─── SummaryBar ────────────────────────────────────────────────────────────────
 
-/**
- * Tüm projeler genelinde özet istatistik satırı.
- *
- * TODO: GÖRKE GÖYNÜGÜR — Gerçek IPC verisiyle hesapla:
- * - totalProjects: projects.length
- * - evaluatedCount: projects.filter(p => resultsMap.has(p.id)).length
- * - totalStudents: [...resultsMap.values()].reduce((acc, r) => acc + r.students.length, 0)
- * - overallPassRate: tüm students içinden status === 'pass' olanlar
- */
-function SummaryBar() {
-  const totalProjects = PROJECTS.length;
-  const evaluatedCount = PROJECTS.filter((p) => p.status === 'evaluated').length;
-  const totalStudents = RESULTS.length;
-  const passCount = RESULTS.filter((r) => r.status === 'PASS').length;
+function SummaryBar({
+  projects,
+  resultsMap,
+  loading,
+}: {
+  projects: Project[];
+  resultsMap: Map<string, ProjectResults>;
+  loading: boolean;
+}) {
+  const totalProjects = projects.length;
+  const evaluatedCount = projects.filter((p) => resultsMap.has(p.id)).length;
+  const allStudents = [...resultsMap.values()].flatMap((r) => r.students);
+  const totalStudents = allStudents.length;
+  const passCount = allStudents.filter((s) => s.status === 'pass').length;
   const overallPassRate = totalStudents > 0 ? Math.round((passCount / totalStudents) * 100) : 0;
 
   const stats = [
-    { label: 'Projects', value: totalProjects },
-    { label: 'Evaluated', value: evaluatedCount },
-    { label: 'Total Students', value: totalStudents },
-    { label: 'Overall Pass Rate', value: `${overallPassRate}%` },
+    { label: 'Projects',         value: loading ? '…' : totalProjects },
+    { label: 'Evaluated',        value: loading ? '…' : evaluatedCount },
+    { label: 'Total Students',   value: loading ? '…' : totalStudents },
+    { label: 'Overall Pass Rate',value: loading ? '…' : `${overallPassRate}%` },
   ];
 
   return (
@@ -217,29 +205,20 @@ function SummaryBar() {
   );
 }
 
-// ─── ProjectCard ──────────────────────────────────────────────────────────────
+// ─── ProjectCard ───────────────────────────────────────────────────────────────
 
 interface ProjectCardProps {
-  project: (typeof PROJECTS)[number];
-  // TODO: GÖRKE GÖYNÜGÜR — MockProject'i Project + resultsMap ile değiştir:
-  // project: Project;
-  // results: ProjectResults | null;
+  project: Project;
+  results: ProjectResults | null;
   onClick: () => void;
 }
 
-/**
- * Tek bir proje için özet kart bileşeni.
- *
- * TODO: GÖRKE GÖYNÜGÜR — Gerçek veri bağlantısı:
- * - `project` prop'unu `Project` tipiyle değiştir
- * - `results` prop'u olarak `ProjectResults | null` al
- * - İstatistikleri getProjectStats() yerine `results` prop'undan hesapla
- * - `status` alanını `results !== null ? 'evaluated' : 'pending'` ile belirle
- * - `createdAt` formatını `new Date(project.createdAt).toLocaleDateString()` ile yap
- */
-function ProjectCard({ project, onClick }: ProjectCardProps) {
-  const { total, passRate } = getProjectStats(project.id);
-  const isEvaluated = project.status === 'evaluated';
+function ProjectCard({ project, results, onClick }: ProjectCardProps) {
+  const { total, passRate } = getStats(results ?? undefined);
+  const isEvaluated = results !== null;
+  const lastRun = results?.runAt
+    ? new Date(results.runAt).toLocaleDateString()
+    : null;
 
   return (
     <div
@@ -264,7 +243,7 @@ function ProjectCard({ project, onClick }: ProjectCardProps) {
     >
       {/* Lang dot */}
       <div style={{ flexShrink: 0 }}>
-        <LangDot lang={project.language} size={36} />
+        <LangDot lang={project.configuration?.language ?? ''} size={36} />
       </div>
 
       {/* Name + meta */}
@@ -273,9 +252,15 @@ function ProjectCard({ project, onClick }: ProjectCardProps) {
           {project.name}
         </div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', gap: 12 }}>
-          <span>{project.configName}</span>
+          <span>{project.configuration?.name ?? '—'}</span>
           <span>·</span>
-          <span>Created {project.createdAt}</span>
+          <span>Created {new Date(project.createdAt).toLocaleDateString()}</span>
+          {lastRun && (
+            <>
+              <span>·</span>
+              <span>Last run {lastRun}</span>
+            </>
+          )}
         </div>
       </div>
 

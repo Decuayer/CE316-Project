@@ -1,131 +1,86 @@
-// TODO: GÖRKE GÖYNÜGÜR [Results Modülü] — Frontend IPC Bağlantısı
-// Bu bileşen şu an mockData kullanıyor. Gerçek IPC'ye geçiş için:
-//
-// ÖN KOŞUL: DEMİR CÜCÜ'nün [FileService + Infra] görevlerini tamamlamasını bekle:
-//   - shared/types.ts içindeki StudentStatus (küçük harf) ve ResultStatus (büyük harf)
-//     uyumsuzluğunun çözülmüş olması: StatusBadge, StudentStatus tipini kabul etmeli
-//   - IpcChannels'daki 'result:update' kanal imzasının aktive edilmiş olması
-//
-// Bu ön koşul sağlandıktan sonra:
-// 1. Mock import'larını kaldır:
-//    - PROJECTS, RESULTS, statusConfig, type ResultStatus import'larını sil
-//
-// 2. Gerçek import'ları ekle:
-//    import { ipc } from '@/lib/ipc';
-//    import type { Project, ProjectResults, StudentResult, StudentStatus } from '@shared/types';
-//
-// 3. `load()` fonksiyonunu implement et (useEffect içinde çağır):
-//    const project = await ipc.project.getById(projectId!);      → setProject(project)
-//    const results = await ipc.project.getResults(projectId!);   → setResults(results)
-//    Hata durumunda console.error ile logla, loading'i false yap.
-//
-// 4. Filtre değerlerini StudentStatus tipiyle uyumlu hale getir:
-//    'pass' | 'fail' | 'compile_error' | 'runtime_error' | 'timeout' | 'missing_source' | 'zip_error'
-//    (Filtre buton label'ları için küçük harf eşleşmesi yap)
-//
-// 5. Tablo satırındaki onClick'i gerçek navigasyon rotasıyla güncelle:
-//    navigate(`/results/${project.id}/${student.studentId}`)  ← zaten bu şekilde
-//    sadece student tipini StudentResult olarak değiştir
-//
-// 6. StatusBadge'e gönderilen `status` değerinin StudentStatus tipinde olduğundan emin ol.
-//
-// 7. Sıralama fonksiyonlarını StudentResult tipine uyarla:
-//    - sortByStudentId: studentId string karşılaştırma
-//    - sortByStatus: status string karşılaştırma
-//    - sortByOutput: outputMatched boolean karşılaştırma
+// [GÖRKE GÖYNÜGÜR — TAMAMLANDI]
+// Bu bileşen gerçek IPC'ye geçirildi.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { ipc } from '@/lib/ipc';
+import type { Project, StudentResult, StudentStatus } from '@shared/types';
 import { Icon } from '@/components/shared/Icon';
 import { LangDot } from '@/components/shared/LangDot';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { cardStyle } from '@/components/shared/StatCard';
-import { PROJECTS, RESULTS, statusConfig, type ResultStatus } from '@/lib/mockData';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-type Filter = 'ALL' | ResultStatus;
+type Filter = 'ALL' | StudentStatus;
 type SortKey = 'studentId' | 'status' | 'output';
 type SortDir = 'asc' | 'desc';
 
-const filterOptions: Filter[] = [
-  'ALL', 'PASS', 'FAIL', 'COMPILE_ERROR', 'RUNTIME_ERROR', 'TIMEOUT',
+const filterOptions: { value: Filter; label: string }[] = [
+  { value: 'ALL',            label: 'All' },
+  { value: 'pass',           label: 'Pass' },
+  { value: 'fail',           label: 'Fail' },
+  { value: 'compile_error',  label: 'Compile Error' },
+  { value: 'runtime_error',  label: 'Runtime Error' },
+  { value: 'timeout',        label: 'Timeout' },
+  { value: 'missing_source', label: 'Missing Source' },
+  { value: 'zip_error',      label: 'ZIP Error' },
 ];
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/**
- * Sonuçları verilen filtre değerine göre filtreler.
- *
- * TODO: GÖRKE GÖYNÜGÜR — `ResultStatus` yerine `StudentStatus` (küçük harf) kullan.
- * Filtre değerlerini 'pass' | 'fail' | 'compile_error' şeklinde güncelle.
- */
-function applyFilter(results: typeof RESULTS, filter: Filter) {
+function applyFilter(results: StudentResult[], filter: Filter) {
   if (filter === 'ALL') return results;
   return results.filter((r) => r.status === filter);
 }
 
-/**
- * Sonuçları verilen sıralama anahtarı ve yönüne göre sıralar.
- *
- * TODO: GÖRKE GÖYNÜGÜR — `typeof RESULTS` yerine `StudentResult[]` kullan.
- */
-function applySort(results: typeof RESULTS, key: SortKey, dir: SortDir) {
+function applySort(results: StudentResult[], key: SortKey, dir: SortDir) {
   return [...results].sort((a, b) => {
     let cmp = 0;
     if (key === 'studentId') cmp = a.studentId.localeCompare(b.studentId);
     else if (key === 'status') cmp = a.status.localeCompare(b.status);
-    else if (key === 'output') cmp = a.outputMatched - b.outputMatched;
+    else if (key === 'output') cmp = (a.outputMatched ? 1 : 0) - (b.outputMatched ? 1 : 0);
     return dir === 'asc' ? cmp : -cmp;
   });
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ResultsProject() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
 
-  // TODO: GÖRKE GÖYNÜGÜR — Aşağıdaki useState'leri gerçek tiplerle değiştir:
-  // const [project, setProject] = useState<Project | null>(null);
-  // const [results, setResults] = useState<StudentResult[]>([]);
-  // const [loading, setLoading] = useState(true);
-  //
-  // useEffect(() => { load(); }, [projectId]);
-  //
-  // async function load() {
-  //   setLoading(true);
-  //   try {
-  //     const [p, r] = await Promise.all([
-  //       ipc.project.getById(projectId!),
-  //       ipc.project.getResults(projectId!),
-  //     ]);
-  //     setProject(p);
-  //     setResults(r?.students ?? []);
-  //   } catch (err) {
-  //     console.error('ResultsProject: load failed', err);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // }
+  const [project, setProject] = useState<Project | null>(null);
+  const [allResults, setAllResults] = useState<StudentResult[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [filter, setFilter] = useState<Filter>('ALL');
   const [sortKey, setSortKey] = useState<SortKey>('studentId');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
-  // Mock veri
-  const project = PROJECTS.find((p) => p.id === projectId);
-  const allResults = RESULTS.filter((r) => r.projectId === projectId);
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      try {
+        const [p, r] = await Promise.all([
+          ipc.project.getById(projectId!),
+          ipc.project.getResults(projectId!),
+        ]);
+        setProject(p);
+        setAllResults(r?.students ?? []);
+      } catch (err) {
+        console.error('ResultsProject: load failed', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [projectId]);
 
   const filtered = applyFilter(allResults, filter);
   const sorted = applySort(filtered, sortKey, sortDir);
 
-  /**
-   * Sıralama başlığına tıklanınca anahtarı değiştirir veya yönü tersine çevirir.
-   *
-   * TODO: GÖRKE GÖYNÜGÜR — Bu fonksiyona dokunmana gerek yok, mock → gerçek geçişte çalışmaya devam eder.
-   */
   function handleSort(key: SortKey) {
     if (sortKey === key) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -135,20 +90,26 @@ export default function ResultsProject() {
     }
   }
 
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <BackButton onClick={() => navigate('/results')} />
+        <div style={{ color: 'var(--text-muted)', fontSize: 14, padding: 24 }}>Loading…</div>
+      </div>
+    );
+  }
+
   if (!project) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <BackButton onClick={() => navigate('/results')} />
-        <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-          Project not found.
-          {/* TODO: GÖRKE GÖYNÜGÜR — loading state eklenince buraya loading spinner ekle */}
-        </div>
+        <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Project not found.</div>
       </div>
     );
   }
 
   const totalStudents = allResults.length;
-  const passCount = allResults.filter((r) => r.status === 'PASS').length;
+  const passCount = allResults.filter((r) => r.status === 'pass').length;
   const passRate = totalStudents > 0 ? Math.round((passCount / totalStudents) * 100) : 0;
 
   return (
@@ -161,9 +122,9 @@ export default function ResultsProject() {
             {project.name}
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-            <LangDot lang={project.language} />
+            <LangDot lang={project.configuration?.language ?? ''} />
             <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-              {project.configName}
+              {project.configuration?.name ?? '—'}
             </span>
           </div>
         </div>
@@ -182,9 +143,8 @@ export default function ResultsProject() {
 
       {/* Filter bar */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {filterOptions.map((f) => {
+        {filterOptions.map(({ value: f, label }) => {
           const active = filter === f;
-          const label = f === 'ALL' ? 'All' : (statusConfig[f as ResultStatus]?.label ?? f);
           return (
             <button
               key={f}
@@ -232,7 +192,7 @@ export default function ResultsProject() {
           <tbody>
             {sorted.map((r) => (
               <tr
-                key={r.id}
+                key={r.studentId}
                 style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
@@ -281,7 +241,7 @@ export default function ResultsProject() {
   );
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Sub-components ────────────────────────────────────────────────────────────
 
 function BackButton({ onClick }: { onClick: () => void }) {
   return (
