@@ -25,6 +25,8 @@ export default function ResultsStudentDetail() {
 
   const [note, setNote] = useState('');
   const [score, setScore] = useState<number | ''>('');
+  const [sourceCode, setSourceCode] = useState<string | null>(null);
+  const [sourceLoading, setSourceLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -41,6 +43,14 @@ export default function ResultsStudentDetail() {
         if (student) {
           setNote(student.note ?? '');
           setScore(student.score ?? '');
+        }
+        // Load source code
+        if (p && student) {
+          setSourceLoading(true);
+          ipc.execution.getStudentSource(p.id, student.studentId)
+            .then((src) => setSourceCode(src))
+            .catch(() => setSourceCode(null))
+            .finally(() => setSourceLoading(false));
         }
       } catch (err) {
         console.error('ResultsStudentDetail: load failed', err);
@@ -131,7 +141,22 @@ export default function ResultsStudentDetail() {
             {project.name}
           </div>
         </div>
-        <StatusBadge status={result.status} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            onClick={() => ipc.execution.openStudentFolder(projectId!, studentId!)}
+            title="Open student folder in Finder"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '7px 12px', borderRadius: 8,
+              border: '1px solid var(--border)',
+              background: 'var(--bg-tertiary)', color: 'var(--text-secondary)',
+              fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            <Icon name="externalLink" size={13} /> Open Folder
+          </button>
+          <StatusBadge status={result.status} />
+        </div>
       </div>
 
       {/* Pipeline */}
@@ -196,11 +221,54 @@ export default function ResultsStudentDetail() {
         )}
       </Section>
 
-      {/* Execution Output */}
+      {/* Execution Output + runtime error callout */}
       {result.compiled && (
         <Section title="Execution Output" icon="terminal">
+          {result.status === 'runtime_error' && executionError && (
+            <div
+              style={{
+                marginBottom: 10,
+                padding: '10px 14px',
+                borderRadius: 8,
+                background: 'var(--red-dim)',
+                border: '1px solid var(--red)',
+                fontSize: 12,
+                fontFamily: "'JetBrains Mono', monospace",
+                color: 'var(--red)',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 8,
+              }}
+            >
+              <Icon name="alert" size={14} color="var(--red)" style={{ marginTop: 1, flexShrink: 0 }} />
+              <div>
+                <div style={{ fontWeight: 700, marginBottom: 4 }}>Runtime Error</div>
+                <div style={{ opacity: 0.9 }}>{executionError}</div>
+              </div>
+            </div>
+          )}
+          {result.status === 'timeout' && (
+            <div
+              style={{
+                marginBottom: 10,
+                padding: '10px 14px',
+                borderRadius: 8,
+                background: 'var(--orange-dim, rgba(234,88,12,0.1))',
+                border: '1px solid var(--orange)',
+                fontSize: 12,
+                fontFamily: "'JetBrains Mono', monospace",
+                color: 'var(--orange)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <Icon name="clock" size={14} color="var(--orange)" />
+              <span><strong>Timeout:</strong> Program exceeded the 10-second execution limit.</span>
+            </div>
+          )}
           <CodeBlock content={executionOutput || '(no output)'} isError={!!executionError} />
-          {executionError && (
+          {executionError && result.status !== 'runtime_error' && (
             <CodeBlock content={executionError} isError />
           )}
         </Section>
@@ -225,6 +293,29 @@ export default function ResultsStudentDetail() {
           </div>
         </Section>
       )}
+
+      {/* Source Code Viewer */}
+      <Section title="Source Code" icon="file">
+        {sourceLoading ? (
+          <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: 8 }}>Loading source…</div>
+        ) : sourceCode !== null ? (
+          <CodeBlock content={sourceCode} />
+        ) : (
+          <div
+            style={{
+              padding: '12px 14px',
+              borderRadius: 8,
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border)',
+              fontSize: 12,
+              color: 'var(--text-muted)',
+              fontFamily: "'JetBrains Mono', monospace",
+            }}
+          >
+            Source file not found on disk.
+          </div>
+        )}
+      </Section>
 
       {/* Instructor Panel */}
       <Section title="Instructor Notes" icon="edit">

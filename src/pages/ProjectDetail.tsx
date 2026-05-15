@@ -21,6 +21,7 @@ export default function ProjectDetail() {
   const [importing, setImporting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmCleanup, setConfirmCleanup] = useState(false);
+  const [showImportMenu, setShowImportMenu] = useState(false);
 
   const load = async () => {
     if (!id) return;
@@ -88,13 +89,33 @@ export default function ProjectDetail() {
   const totalStudents = results?.students.length ?? students.length;
   const hasResults = results !== null && results.students.length > 0;
 
-  const handleImportZips = async () => {
+  const handleImportFolder = async () => {
+    setShowImportMenu(false);
     const dirPath = await ipc.dialog.openDirectory();
     if (!dirPath) return;
     setImporting(true);
     try {
       const imported = await ipc.execution.importZips(project.id, dirPath);
       setStudents(imported);
+    } catch (err: any) {
+      console.error('Import failed:', err);
+      alert(`Import failed: ${err.message}`);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleImportFiles = async () => {
+    setShowImportMenu(false);
+    const filePaths = await ipc.dialog.openFiles([{ name: 'ZIP Archives', extensions: ['zip'] }]);
+    if (!filePaths || filePaths.length === 0) return;
+    setImporting(true);
+    try {
+      const imported = await ipc.execution.importZipFiles(project.id, filePaths);
+      setStudents((prev) => {
+        const merged = new Set([...prev, ...imported]);
+        return [...merged];
+      });
     } catch (err: any) {
       console.error('Import failed:', err);
       alert(`Import failed: ${err.message}`);
@@ -123,9 +144,15 @@ export default function ProjectDetail() {
   };
 
   const handleCleanup = async () => {
-    await ipc.execution.cleanup(project.id);
-    setConfirmCleanup(false);
-    await load();
+    try {
+      await ipc.execution.cleanup(project.id);
+      setConfirmCleanup(false);
+      await load();
+    } catch (err: any) {
+      console.error('Cleanup failed:', err);
+      alert(`Cleanup failed: ${err.message}`);
+      setConfirmCleanup(false);
+    }
   };
 
   return (
@@ -155,21 +182,101 @@ export default function ProjectDetail() {
         </div>
 
         {/* Action buttons */}
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, position: 'relative' }}>
+          {/* Import ZIPs split button */}
+          <div style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
+              <button
+                onClick={handleImportFolder}
+                disabled={importing}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '9px 14px',
+                  background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
+                  fontWeight: 600, fontSize: 13, cursor: importing ? 'not-allowed' : 'pointer',
+                  fontFamily: 'inherit', opacity: importing ? 0.6 : 1,
+                  border: 'none', borderRight: '1px solid var(--border)',
+                }}
+              >
+                <Icon name="folder" size={15} />
+                {importing ? 'Importing…' : 'Import ZIPs'}
+              </button>
+              <button
+                onClick={() => setShowImportMenu((v) => !v)}
+                disabled={importing}
+                style={{
+                  display: 'flex', alignItems: 'center',
+                  padding: '9px 10px',
+                  background: 'var(--bg-tertiary)', color: 'var(--text-secondary)',
+                  border: 'none', cursor: importing ? 'not-allowed' : 'pointer',
+                  fontFamily: 'inherit',
+                }}
+                title="More import options"
+              >
+                <Icon name={showImportMenu ? 'chevronUp' : 'chevronDown'} size={13} />
+              </button>
+            </div>
+
+            {showImportMenu && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  left: 0,
+                  zIndex: 100,
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 10,
+                  overflow: 'hidden',
+                  minWidth: 200,
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                }}
+              >
+                <button
+                  onClick={handleImportFolder}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    width: '100%', padding: '11px 16px',
+                    background: 'transparent', color: 'var(--text-primary)',
+                    border: 'none', borderBottom: '1px solid var(--border)',
+                    cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
+                    textAlign: 'left',
+                  }}
+                >
+                  <Icon name="folder" size={14} /> Select Folder
+                  <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>All ZIPs inside</span>
+                </button>
+                <button
+                  onClick={handleImportFiles}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    width: '100%', padding: '11px 16px',
+                    background: 'transparent', color: 'var(--text-primary)',
+                    border: 'none', cursor: 'pointer',
+                    fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
+                    textAlign: 'left',
+                  }}
+                >
+                  <Icon name="file" size={14} /> Select ZIP Files
+                  <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>Multi-select</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Open submissions folder */}
           <button
-            onClick={handleImportZips}
-            disabled={importing}
+            onClick={() => ipc.execution.openStudentFolder(project.id, '')}
+            title="Open submissions folder in Finder"
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              padding: '9px 14px', borderRadius: 10,
+              padding: '9px 12px', borderRadius: 10,
               border: '1px solid var(--border)',
-              background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
-              fontWeight: 600, fontSize: 13, cursor: importing ? 'not-allowed' : 'pointer',
-              fontFamily: 'inherit', opacity: importing ? 0.6 : 1,
+              background: 'var(--bg-tertiary)', color: 'var(--text-secondary)',
+              fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
             }}
           >
-            <Icon name="folder" size={15} />
-            {importing ? 'Importing…' : 'Import ZIPs'}
+            <Icon name="externalLink" size={15} />
           </button>
 
           <button
@@ -340,7 +447,7 @@ export default function ProjectDetail() {
         onClose={() => setConfirmDelete(false)}
         onConfirm={handleDelete}
         title="Delete Project"
-        message={`"${project.name}" projesini ve tüm dosyalarını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`}
+        message={`Are you sure you want to delete "${project.name}" and all its files? This action cannot be undone.`}
         confirmText="Delete"
         confirmColor="var(--red)"
       />
@@ -350,7 +457,7 @@ export default function ProjectDetail() {
         onClose={() => setConfirmCleanup(false)}
         onConfirm={handleCleanup}
         title="Clean Up Artifacts"
-        message="Bu işlem her öğrencinin klasöründeki kaynak dosya dışındaki tüm dosyaları (derlenmiş çıktılar vb.) siler. Devam etmek istiyor musunuz?"
+        message="This will delete all compiled binaries and other build artifacts from each student's folder, keeping only the source file. Continue?"
         confirmText="Clean Up"
         confirmColor="var(--orange)"
       />
