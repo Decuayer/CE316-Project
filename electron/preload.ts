@@ -73,14 +73,20 @@ const api = {
       try { return await ipcRenderer.invoke('execution:importZips', projectId, dirPath); }
       catch (error) { console.error('IPC Error [execution:importZips]:', error); throw error; }
     },
+    importZipFiles: (projectId: string, filePaths: string[]) =>
+      invoke('execution:importZipFiles', projectId, filePaths),
     run: (projectId: string) => invoke('execution:run', projectId),
-    // Removes everything under each student folder that is NOT the source file.
-    // See evaluation-flow-design.md "Clean up artifacts button".
     cleanup: (projectId: string) => invoke('execution:cleanup', projectId),
     getStudents: async (projectId: string) => {
       try { return await ipcRenderer.invoke('execution:getStudents', projectId); }
       catch (error) { console.error('IPC Error [execution:getStudents]:', error); throw error; }
     },
+    deleteStudent: (projectId: string, studentId: string) =>
+      invoke('execution:deleteStudent', projectId, studentId),
+    openStudentFolder: (projectId: string, studentId: string) =>
+      invoke('execution:openStudentFolder', projectId, studentId),
+    getStudentSource: (projectId: string, studentId: string) =>
+      invoke('execution:getStudentSource', projectId, studentId),
   },
 
   // --- Dialog operations ---
@@ -88,6 +94,8 @@ const api = {
     openDirectory: () => invoke('dialog:openDirectory'),
     openFile: (filters?: { name: string; extensions: string[] }[]) =>
       invoke('dialog:openFile', filters),
+    openFiles: (filters?: { name: string; extensions: string[] }[]) =>
+      invoke('dialog:openFiles', filters),
     saveFile: (defaultName: string, filters?: { name: string; extensions: string[] }[]) =>
       invoke('dialog:saveFile', defaultName, filters),
   },

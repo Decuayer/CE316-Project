@@ -33,6 +33,8 @@ async function initializeApp() {
   // Dialog IPC handlers
   ipcMain.handle('dialog:openDirectory', async () => {
     const result = await dialog.showOpenDialog(mainWindow!, {
+      title: 'Select Submissions Folder',
+      buttonLabel: 'Select Folder',
       properties: ['openDirectory'],
     });
     return result.canceled ? null : result.filePaths[0];
@@ -40,10 +42,21 @@ async function initializeApp() {
 
   ipcMain.handle('dialog:openFile', async (_event, filters) => {
     const result = await dialog.showOpenDialog(mainWindow!, {
+      title: 'Select File',
       properties: ['openFile'],
       filters: filters || [{ name: 'All Files', extensions: ['*'] }],
     });
     return result.canceled ? null : result.filePaths[0];
+  });
+
+  ipcMain.handle('dialog:openFiles', async (_event, filters) => {
+    const result = await dialog.showOpenDialog(mainWindow!, {
+      title: 'Select ZIP Files',
+      buttonLabel: 'Import Selected',
+      properties: ['openFile', 'multiSelections'],
+      filters: filters || [{ name: 'ZIP Archives', extensions: ['zip'] }],
+    });
+    return result.canceled ? [] : result.filePaths;
   });
 
   ipcMain.handle('dialog:saveFile', async (_event, defaultName, filters) => {

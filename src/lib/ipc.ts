@@ -61,12 +61,18 @@ export const ipc = {
   execution: {
     importZips: (projectId: string, dirPath: string): Promise<string[]> =>
       window.api.execution.importZips(projectId, dirPath),
-    // The renderer uses this promise's lifecycle alone to drive the run-button
-    // loading state (see evaluation-flow-design.md "Run button states").
+    importZipFiles: (projectId: string, filePaths: string[]): Promise<string[]> =>
+      window.api.execution.importZipFiles(projectId, filePaths),
     run: (projectId: string): Promise<ProjectResults> => window.api.execution.run(projectId),
     cleanup: (projectId: string): Promise<void> => window.api.execution.cleanup(projectId),
     getStudents: (projectId: string): Promise<string[]> =>
       window.api.execution.getStudents(projectId),
+    deleteStudent: (projectId: string, studentId: string): Promise<{ studentId: string; deleted: boolean }> =>
+      window.api.execution.deleteStudent(projectId, studentId),
+    openStudentFolder: (projectId: string, studentId: string): Promise<void> =>
+      window.api.execution.openStudentFolder(projectId, studentId),
+    getStudentSource: (projectId: string, studentId: string): Promise<string | null> =>
+      window.api.execution.getStudentSource(projectId, studentId),
   },
 
   // ------------------------------ Dialog ------------------------------------
@@ -74,13 +80,15 @@ export const ipc = {
     openDirectory: (): Promise<string | null> => window.api.dialog.openDirectory(),
     openFile: (filters?: { name: string; extensions: string[] }[]): Promise<string | null> =>
       window.api.dialog.openFile(filters),
+    openFiles: (filters?: { name: string; extensions: string[] }[]): Promise<string[]> =>
+      window.api.dialog.openFiles(filters),
     saveFile: (
       defaultName: string,
       filters?: { name: string; extensions: string[] }[],
     ): Promise<string | null> => window.api.dialog.saveFile(defaultName, filters),
   },
 
-  // ------------------------- Result Annotations [Results Modülü] -----------
+  // ------------------------- Result Annotations ----------------------------
   result: {
     update: (
       projectId: string,
