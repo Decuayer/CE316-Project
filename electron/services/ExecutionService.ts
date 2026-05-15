@@ -77,10 +77,11 @@ export class ExecutionService {
     base.sourceFound = true;
 
     if (configuration.compileCommand) {
+      const resolvedCompileCmd = this.resolveCommand(configuration.compileCommand, sourceFile, outputName);
       const compileArgv = this.buildArgv(configuration.compileArgs, sourceFile, outputName, []);
       try {
         const { stdout, stderr } = await execFileAsync(
-          configuration.compileCommand,
+          resolvedCompileCmd,
           compileArgv,
           { cwd: studentDir, timeout: 10000 },
         );
@@ -89,7 +90,7 @@ export class ExecutionService {
       } catch (err: any) {
         base.compileOutput = err.stdout ?? '';
         base.compileError = err.code === 'ENOENT'
-          ? `compiler not found: ${configuration.compileCommand}`
+          ? `compiler not found: ${resolvedCompileCmd}`
           : (err.stderr ?? err.message ?? String(err));
         return { ...base, status: 'compile_error' as const };
       }
@@ -106,11 +107,12 @@ export class ExecutionService {
       return { ...base, status: 'runtime_error' as const };
     }
 
+    const resolvedRunCmd = this.resolveCommand(configuration.runCommand, sourceFile, outputName);
     const runArgv = this.buildArgv(configuration.runArgs, sourceFile, outputName, argvFromInput);
     let actualOutput = '';
     try {
       const { stdout } = await execFileAsync(
-        configuration.runCommand,
+        resolvedRunCmd,
         runArgv,
         { cwd: studentDir, timeout: 10000 },
       );
@@ -158,6 +160,17 @@ export class ExecutionService {
 
   // -------------- internal helpers --------------
 
+  /**
+   * Resolves template tokens ({{sourceFile}}, {{outputName}}) inside a command string.
+   * Allows users to write runCommand as `./{{outputName}}` instead of a hardcoded binary name.
+   */
+  private resolveCommand(cmd: string, sourceFile: string, outputName: string): string {
+    return cmd
+      .replace(/\{\{sourceFile\}\}/g, sourceFile)
+      .replace(/\{\{outputName\}\}/g, outputName)
+      .trim();
+  }
+
   private buildArgv(
     template: string | undefined,
     sourceFile: string,
@@ -185,7 +198,14 @@ export class ExecutionService {
   }
 
   private async resolveDataSource(source: DataSource): Promise<string> {
-    if (source.type === 'text') return source.value;
+    if (source.type === 'text') {
+      // Parse common escape sequences so users can write \n in the config UI
+      // and have it treated as an actual newline when passed as argv or compared.
+      return source.value
+        .replace(/\\n/g, '\n')
+        .replace(/\\t/g, '\t')
+        .replace(/\\r/g, '\r');
+    }
     return fs.readFile(source.path, 'utf-8');
   }
 

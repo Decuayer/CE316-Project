@@ -31,14 +31,55 @@ export class ZipService {
   }
 
   /**
-   * Extracts a single ZIP file to the target directory. 
-   * Throws an error if extraction fails.
+   * Extracts a single ZIP file to the target directory.
+   *
+   * Flattening logic: if the ZIP contains exactly one top-level directory
+   * (the common student submission pattern: `20230001/main.c`), the contents
+   * of that directory are extracted directly into `targetDir` so that
+   * `targetDir/main.c` is the final path — not `targetDir/20230001/main.c`.
+   *
+   * Falls back to raw extraction when the ZIP has multiple top-level entries
+   * or no common root directory.
+   *
+   * Throws if extraction fails.
    */
   async extractZip(zipPath: string, targetDir: string): Promise<void> {
     try {
       await this.fileService.ensureDir(targetDir);
       const zip = new AdmZip(zipPath);
-      zip.extractAllTo(targetDir, true);
+      const entries = zip.getEntries();
+
+      // Determine if all entries share a single top-level directory
+      const topLevelDirs = new Set<string>();
+      for (const entry of entries) {
+        const parts = entry.entryName.split('/');
+        if (parts[0]) topLevelDirs.add(parts[0]);
+      }
+
+      if (topLevelDirs.size === 1) {
+        // Flatten: strip the single top-level directory prefix
+        const prefix = [...topLevelDirs][0] + '/';
+        for (const entry of entries) {
+          const relativePath = entry.entryName.startsWith(prefix)
+            ? entry.entryName.slice(prefix.length)
+            : entry.entryName;
+
+          if (!relativePath) continue; // skip the directory entry itself
+
+          const destPath = path.join(targetDir, relativePath);
+          if (entry.isDirectory) {
+            await this.fileService.ensureDir(destPath);
+          } else {
+            await this.fileService.ensureDir(path.dirname(destPath));
+            const content = entry.getData();
+            const fs = await import('fs/promises');
+            await fs.writeFile(destPath, content);
+          }
+        }
+      } else {
+        // No single root → extract as-is
+        zip.extractAllTo(targetDir, true);
+      }
     } catch (error: any) {
       throw new Error(`ZIP extraction failed for ${zipPath}: ${error.message}`);
     }
@@ -47,6 +88,8 @@ export class ZipService {
   /**
    * Extracts all ZIP files from dirPath into projectSubmissionsDir.
    * Skips corrupted ZIPs and continues with the next one.
+   * Cleans up the target directory if extraction fails so the student
+   * does not appear as a ghost entry in subsequent pipeline runs.
    * Returns an array of successfully extracted student IDs.
    */
   async extractAll(dirPath: string, projectSubmissionsDir: string): Promise<string[]> {
@@ -63,9 +106,14 @@ export class ZipService {
         successfulExtractions.push(studentId);
       } catch (error) {
         console.error(`Skipping ${zipFile} due to error:`, error);
-        // Hata durumunu atlayıp diğer öğrencilerle devam 
+        // Remove the empty directory so it doesn't show up as a ghost student
+        try {
+          await this.fileService.deleteDir(targetDir);
+        } catch {
+          // ignore cleanup errors
+        }
       }
-    } 
+    }
 
     return successfulExtractions;
   }
