@@ -26,10 +26,6 @@ mac:
 
 dmg:
   title: "IAE ${version}"
-  background: build/dmg-background.png
-  window:
-    width: 660
-    height: 400
 
 # ─── Windows ──────────────────────────────────────────────────────────────────
 win:
