@@ -1,61 +1,15 @@
-// ─── TODO: DEMİR CÜCÜ [FileService + Infra Modülü] — Ön Koşul ───────────────
-// Aşağıdaki GÖRKE GÖYNÜGÜR görevleri başlamadan önce tamamlanmalı:
-//
-// 1. shared/types.ts → DATABASE_SCHEMA sabitine `note TEXT` ve `score REAL` sütunlarını ekle
-// 2. shared/types.ts → IpcChannels içindeki 'result:update' kanal imzasını uncomment et
-//    (satır: // 'result:update': (projectId, studentId, patch) => Promise<StudentResult>)
-// Tamamlandığında GÖRKE GÖYNÜGÜR'ü bilgilendir.
-//
-// ─── TODO: GÖRKE GÖYNÜGÜR [Results Modülü] — Frontend + Backend Implementasyonu ─
-// DEMİR CÜCÜ yukarıdaki ön koşulları tamamladıktan sonra:
-//
-// 1. Mock import'larını kaldır:
-//    - PROJECTS, RESULTS import'larını sil
-//
-// 2. Gerçek import'ları ekle:
-//    import { ipc } from '@/lib/ipc';
-//    import type { Project, StudentResult } from '@shared/types';
-//
-// 3. `load()` fonksiyonunu implement et (useEffect içinde çağır):
-//    const [p, r] = await Promise.all([
-//      ipc.project.getById(projectId!),
-//      ipc.project.getResults(projectId!),
-//    ]);
-//    setProject(p);
-//    const student = r?.students.find(s => s.studentId === studentId) ?? null;
-//    setResult(student);
-//
-// 4. `handleSave()` fonksiyonunu implement et (result:update kanalı aktive olduktan sonra):
-//    - await ipc.result.update(projectId!, studentId!, { note, score: Number(score) });
-//    - Başarı durumunda bir toast veya "Saved ✓" animasyonu göster
-//    - Hata durumunda console.error ile logla ve kullanıcıya alert göster
-//
-// 5. Pipeline steps'ini gerçek StudentResult boolean alanlarıyla bağla:
-//    - 'Extracted':   result.zipExtracted
-//    - 'Source Found': result.sourceFound
-//    - 'Compiled':    result.compiled
-//    - 'Executed':    result.executed
-//    - 'Matched':     result.outputMatched
-//
-// 6. Code bloklarında gerçek verileri göster:
-//    - Compile Output:   result.compileOutput
-//    - Compile Error:    result.compileError (varsa kırmızı)
-//    - Execution Output: result.executionOutput
-//    - Execution Error:  result.executionError (varsa kırmızı)
-//    - Expected Output:  result.expectedOutput
-//    - Actual Output:    result.actualOutput
-//
-// 7. Not ve puan state'lerini gerçek veriye bağla:
-//    - `note`  state'ini result.note ?? '' ile başlat
-//    - `score` state'ini result.score ?? '' ile başlat
+// [GÖRKE GÖYNÜGÜR — TAMAMLANDI]
+// Bu bileşen gerçek IPC'ye geçirildi.
+// Kalan görev: ResultsIndex ve ResultsProject'in IPC'ye geçişi.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { ipc } from '@/lib/ipc';
+import type { Project, StudentResult } from '@shared/types';
 import { Icon } from '@/components/shared/Icon';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { cardStyle } from '@/components/shared/StatCard';
-import { PROJECTS, RESULTS } from '@/lib/mockData';
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -63,100 +17,87 @@ export default function ResultsStudentDetail() {
   const { projectId, studentId } = useParams<{ projectId: string; studentId: string }>();
   const navigate = useNavigate();
 
-  // TODO: GÖRKE GÖYNÜGÜR — Aşağıdaki useState'leri gerçek veriye bağla (yukarıdaki TODO 3)
-  // const [project, setProject] = useState<Project | null>(null);
-  // const [result, setResult] = useState<StudentResult | null>(null);
-  // const [loading, setLoading] = useState(true);
-  // const [saving, setSaving] = useState(false);
-  //
-  // useEffect(() => { load(); }, [projectId, studentId]);
+  const [project, setProject] = useState<Project | null>(null);
+  const [result, setResult] = useState<StudentResult | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const [note, setNote] = useState('');
   const [score, setScore] = useState<number | ''>('');
 
-  // Mock veri — gerçek IPC'ye geçince bu iki satırı kaldır
-  const project = PROJECTS.find((p) => p.id === projectId);
-  const result = RESULTS.find((r) => r.projectId === projectId && r.studentId === studentId);
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      try {
+        const [p, r] = await Promise.all([
+          ipc.project.getById(projectId!),
+          ipc.project.getResults(projectId!),
+        ]);
+        setProject(p);
+        const student = r?.students.find((s) => s.studentId === studentId) ?? null;
+        setResult(student);
+        // Pre-fill instructor annotation fields from saved values
+        if (student) {
+          setNote(student.note ?? '');
+          setScore(student.score ?? '');
+        }
+      } catch (err) {
+        console.error('ResultsStudentDetail: load failed', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [projectId, studentId]);
 
   /**
-   * Not ve puanı kaydeder.
-   *
-   * TODO: GÖRKE GÖYNÜGÜR — Bu fonksiyonun gövdesini implement et:
-   * 1. shared/types.ts'deki `result:update` IPC kanalının aktive edilmesini bekle
-   * 2. Aktive edildikten sonra:
-   *    setSaving(true);
-   *    try {
-   *      await ipc.result.update(projectId!, studentId!, { note, score: Number(score) });
-   *      // Başarı bildirimi göster (örn. geçici "Saved ✓" text'i)
-   *    } catch (err) {
-   *      console.error('Save failed:', err);
-   *      alert('Failed to save. Please try again.');
-   *    } finally {
-   *      setSaving(false);
-   *    }
+   * Persists the instructor note and score via the result:update IPC channel.
+   * Shows a brief "Saved ✓" feedback indicator on success.
    */
   async function handleSave() {
-    // TODO: GÖRKE GÖYNÜGÜR — Yukarıdaki açıklamayı oku ve implement et
-    console.warn('handleSave: result:update IPC kanalı henüz implement edilmedi.');
-    alert('Save functionality will be available once the result:update IPC channel is implemented.\nSee TODO in shared/types.ts');
+    setSaving(true);
+    try {
+      await ipc.result.update(projectId!, studentId!, {
+        note,
+        score: score === '' ? undefined : Number(score),
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error('ResultsStudentDetail: save failed', err);
+      alert('Failed to save. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   // ─── Pipeline step definitions ──────────────────────────────────────────────
-  //
-  // TODO: GÖRKE GÖYNÜGÜR — Her adım için `ok` değerini gerçek result alanından hesapla (yukarıdaki TODO 5)
-  // Şu an status string karşılaştırması kullanılıyor, gerçek veriye geçince boolean alanları kullan.
-
+  // Each step's `ok` field is derived from the real StudentResult boolean fields.
   const pipelineSteps = [
-    {
-      label: 'Extracted',
-      // TODO: ok: result?.zipExtracted ?? false
-      ok: result !== undefined,
-    },
-    {
-      label: 'Source Found',
-      // TODO: ok: result?.sourceFound ?? false
-      ok: result !== undefined && result.status !== 'COMPILE_ERROR' && result.status !== 'RUNTIME_ERROR',
-    },
-    {
-      label: 'Compiled',
-      // TODO: ok: result?.compiled ?? false
-      ok: result !== undefined && result.status !== 'COMPILE_ERROR',
-    },
-    {
-      label: 'Executed',
-      // TODO: ok: result?.executed ?? false
-      ok: result !== undefined && result.status !== 'COMPILE_ERROR' && result.status !== 'RUNTIME_ERROR' && result.status !== 'TIMEOUT',
-    },
-    {
-      label: 'Matched',
-      // TODO: ok: result?.outputMatched ?? false
-      ok: result?.outputMatched === 1,
-    },
+    { label: 'Extracted',    ok: result?.zipExtracted    ?? false },
+    { label: 'Source Found', ok: result?.sourceFound     ?? false },
+    { label: 'Compiled',     ok: result?.compiled        ?? false },
+    { label: 'Executed',     ok: result?.executed        ?? false },
+    { label: 'Matched',      ok: result?.outputMatched   ?? false },
   ];
 
-  // ─── Mock output strings ────────────────────────────────────────────────────
-  //
-  // TODO: GÖRKE GÖYNÜGÜR — Aşağıdaki mock değerleri gerçek result alanlarıyla değiştir:
-  // compileOutput   → result.compileOutput
-  // compileError    → result.compileError
-  // executionOutput → result.executionOutput
-  // executionError  → result.executionError
-  // expectedOutput  → result.expectedOutput
-  // actualOutput    → result.actualOutput
+  // ─── Output strings from real StudentResult fields ─────────────────────────
+  const compileOutput    = result?.compileOutput    ?? '';
+  const compileError     = result?.compileError;
+  const executionOutput  = result?.executionOutput  ?? '';
+  const executionError   = result?.executionError;
+  const expectedOutput   = result?.expectedOutput   ?? '';
+  const actualOutput     = result?.actualOutput     ?? '';
 
-  const compileOutput = result
-    ? result.status === 'COMPILE_ERROR'
-      ? 'main.c: In function \'main\':\nmain.c:12:3: error: expected \';\' before \'return\''
-      : 'Compilation successful.'
-    : '';
-
-  const executionOutput = result && result.status !== 'COMPILE_ERROR'
-    ? result.outputMatched
-      ? 'apple\nbanana\ncherry\n'
-      : 'Cherry\nBanana\nApple\n'
-    : '';
-
-  const expectedOutput = 'apple\nbanana\ncherry\n';
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <BackButton onClick={() => navigate(`/results/${projectId}`)} />
+        <div style={{ color: 'var(--text-muted)', fontSize: 14, padding: 24 }}>Loading…</div>
+      </div>
+    );
+  }
 
   if (!project || !result) {
     return (
@@ -164,7 +105,6 @@ export default function ResultsStudentDetail() {
         <BackButton onClick={() => navigate(`/results/${projectId}`)} />
         <div style={{ ...cardStyle, color: 'var(--text-muted)', fontSize: 14 }}>
           No result found for student <strong>{studentId}</strong>.
-          {/* TODO: GÖRKE GÖYNÜGÜR — loading state eklenince loading spinner göster */}
         </div>
       </div>
     );
@@ -250,31 +190,37 @@ export default function ResultsStudentDetail() {
 
       {/* Compile Output */}
       <Section title="Compile Output" icon="terminal">
-        <CodeBlock content={compileOutput || '(no output)'} isError={result.status === 'COMPILE_ERROR'} />
+        <CodeBlock content={compileOutput || '(no output)'} isError={!!compileError} />
+        {compileError && (
+          <CodeBlock content={compileError} isError />
+        )}
       </Section>
 
       {/* Execution Output */}
-      {result.status !== 'COMPILE_ERROR' && (
+      {result.compiled && (
         <Section title="Execution Output" icon="terminal">
-          <CodeBlock content={executionOutput || '(no output)'} isError={result.status === 'RUNTIME_ERROR'} />
+          <CodeBlock content={executionOutput || '(no output)'} isError={!!executionError} />
+          {executionError && (
+            <CodeBlock content={executionError} isError />
+          )}
         </Section>
       )}
 
       {/* Expected vs Actual diff */}
-      {result.status !== 'COMPILE_ERROR' && (
+      {result.compiled && (
         <Section title="Output Comparison" icon="diff">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>
                 Expected
               </div>
-              <CodeBlock content={expectedOutput} />
+              <CodeBlock content={expectedOutput || '(no output)'} />
             </div>
             <div>
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>
                 Actual
               </div>
-              <CodeBlock content={executionOutput || '(no output)'} isError={!result.outputMatched} />
+              <CodeBlock content={actualOutput || '(no output)'} isError={!result.outputMatched} />
             </div>
           </div>
         </Section>
@@ -358,29 +304,34 @@ export default function ResultsStudentDetail() {
               />
             </div>
 
-            {/* Save button */}
-            {/* TODO: GÖRKE GÖYNÜGÜR — `disabled` prop'unu `saving` state'iyle bağla */}
-            <button
-              onClick={handleSave}
-              style={{
-                marginTop: 22,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '9px 18px',
-                borderRadius: 10,
-                border: 'none',
-                background: 'var(--accent)',
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: 13,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-              }}
-            >
-              <Icon name="check" size={14} color="#fff" />
-              Save
-            </button>
+            {/* Save button + saved feedback */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 22 }}>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '9px 18px',
+                  borderRadius: 10,
+                  border: 'none',
+                  background: saving ? 'var(--bg-tertiary)' : 'var(--accent)',
+                  color: saving ? 'var(--text-muted)' : '#fff',
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: saving ? 'not-allowed' : 'pointer',
+                  fontFamily: 'inherit',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <Icon name="check" size={14} color={saving ? 'var(--text-muted)' : '#fff'} />
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+              {saved && (
+                <span style={{ fontSize: 13, color: 'var(--green)', fontWeight: 600 }}>Saved ✓</span>
+              )}
+            </div>
           </div>
         </div>
       </Section>
