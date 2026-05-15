@@ -81,4 +81,13 @@ export function registerProjectIpc(ipcMain: IpcMain, dbService: DatabaseService,
       throw new Error(`Failed to get statistics: ${err.message}`);
     }
   });
+
+  // --- Result annotation operations [Results Modülü] ---
+  ipcMain.handle('result:update', async (_e, projectId: string, studentId: string, patch: { note?: string; score?: number }) => {
+    try {
+      return await projectService.updateStudentResult(projectId, studentId, patch);
+    } catch (err: any) {
+      throw new Error(`Failed to update student result: ${err.message}`);
+    }
+  });
 }

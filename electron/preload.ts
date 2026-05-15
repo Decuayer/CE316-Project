@@ -91,6 +91,12 @@ const api = {
     saveFile: (defaultName: string, filters?: { name: string; extensions: string[] }[]) =>
       invoke('dialog:saveFile', defaultName, filters),
   },
+
+  // --- Result annotation operations [Results Modülü] ---
+  result: {
+    update: (projectId: string, studentId: string, patch: { note?: string; score?: number }) =>
+      invoke('result:update', projectId, studentId, patch),
+  },
 };
 
 contextBridge.exposeInMainWorld('api', api);
