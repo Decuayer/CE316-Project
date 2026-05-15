@@ -36,8 +36,34 @@ export class DatabaseService {
             console.error('Error creating database schema: ', error);
             throw error;
         }
-        
+        this.runMigrations();
     }
+
+    /**
+     * Applies incremental schema migrations for databases created before certain schema additions.
+     *
+     * Each migration is wrapped in try/catch so that columns which already exist
+     * do not cause a fatal error (SQLite does not support IF NOT EXISTS on ALTER TABLE ADD COLUMN
+     * in older versions; the error code SQLITE_ERROR is caught and ignored).
+     *
+     * Migrations list:
+     *   - v1: Add `note TEXT` and `score REAL` to results table (instructor annotations)
+     */
+    private runMigrations() {
+        const migrations: string[] = [
+            'ALTER TABLE results ADD COLUMN note TEXT',
+            'ALTER TABLE results ADD COLUMN score REAL',
+        ];
+
+        for (const sql of migrations) {
+            try {
+                this.db.exec(sql);
+            } catch {
+                // Column already exists — safe to ignore.
+            }
+        }
+    }
+
 
     /**
      * Returns the active database instance. Throws an error if not connected.

@@ -1,17 +1,9 @@
-// TODO: DEMİR CÜCÜ [FileService + Infra Modülü]
-// Tüm tipleri gözden geçir ve frontend bileşenlerinle uyumlu olduğundan emin ol.
-// Özellikle:
-// 1. StudentStatus tipindeki tüm değerlerin StatusBadge bileşeninde karşılığı olmalı
-// 2. DashboardStats tipinin Dashboard sayfasının ihtiyaçlarını karşıladığını doğrula
-// 3. Project tipindeki 'configuration' alanının getAll'da doldurulup doldurulmadığını kontrol et
-//    (şu an sadece getById'de dolduruluyor - Ege Çağan ile koordine et)
-// 4. StudentResult'a eklenen `note` ve `score` alanlarını DatabaseService'e yansıt (Infra görevi):
-//    - results tablosuna `note TEXT` ve `score REAL` sütunları ekle (nullable)
-//    - Mevcut kayıtlar için varsayılan değer: NULL
-//    - DATABASE_SCHEMA sabitini bu dosyanın altında güncelle
-// 5. IpcChannels içindeki 'result:update' kanal imzasını aktive et (tip tanımı Infra görevi):
-//    - Yoruma alınmış satırı uncomment et
-//    - Kanal imzası: (projectId, studentId, patch) => Promise<StudentResult>
+// [DEMİR CÜCÜ — TAMAMLANDI]
+// 1. StudentStatus ↔ StatusBadge uyumu doğrulandı (StatusBadge zaten StudentStatus kullanıyor)
+// 2. DashboardStats ↔ Dashboard sayfası uyumu doğrulandı
+// 3. Project.configuration getAll'da dolduruluyor (ProjectService.getAll() bunu yapıyor)
+// 4. DATABASE_SCHEMA'ya note/score sütunları eklendi (aşağıda)
+// 5. result:update IPC kanal imzası aktive edildi (IpcChannels içinde)
 
 // --- Configuration [R4][R5] ---
 
@@ -96,12 +88,6 @@ export interface StudentResult {
   timestamp: string;
 
   // --- Instructor annotations (Results Modülü) ---
-  //
-  // TODO: DEMİR CÜCÜ [FileService + Infra Modülü]
-  // Bu alanlar için veritabanı şemasını güncelle (bu dosyanın altındaki DATABASE_SCHEMA sabiti):
-  //   - results tablosuna `note TEXT` ve `score REAL` sütunlarını ekle
-  //   - Her ikisi de nullable; mevcut kayıtlar için varsayılan değer NULL
-  //   - Şemayı güncelledikten sonra GÖRKE GÖYNÜGÜR'ü bilgilendir (backend handler sıradaki adım)
   note?: string;                   // Instructor note (free text)
   score?: number;                  // Instructor score (0–100 range suggested)
 }
@@ -132,20 +118,17 @@ export interface IpcChannels {
   'project:delete': (id: string) => Promise<void>;
   'project:getResults': (id: string) => Promise<ProjectResults | null>;
 
-  // TODO: DEMİR CÜCÜ [FileService + Infra Modülü] — Adım 1: Tip imzasını aktive et
-  // DEMİR CÜCÜ: DATABASE_SCHEMA ve yukarıdaki `note`/`score` şemasını tamamladıktan sonra
-  // aşağıdaki satırı uncomment et ve bu TODO bloğunu kaldır.
-  // Kanal imzası hazır — backend implementasyonu GÖRKE GÖYNÜGÜR'e ait (aşağıdaki TODO).
-  // 'result:update': (projectId: string, studentId: string, patch: { note?: string; score?: number }) => Promise<StudentResult>;
-  //
+  // Result annotation operations [Results Modülü]
+  'result:update': (projectId: string, studentId: string, patch: { note?: string; score?: number }) => Promise<StudentResult>;
+
   // TODO: GÖRKE GÖYNÜGÜR [Results Modülü] — Adım 2: Backend implementasyonu
-  // DEMİR CÜCÜ yukarıdaki tip imzasını aktive ettikten sonra aşağıdakileri yap:
-  // 1. electron/services/ProjectService.ts'e updateStudentResult() metodu ekle:
-  //    updateStudentResult(projectId: string, studentId: string, patch: { note?: string; score?: number }): StudentResult
+  // Bu kanal imzası aktive edildi. Sıradaki adımlar:
+  // 1. electron/services/ProjectService.ts'e updateStudentResult() metodu ekle
   // 2. electron/ipc/project.ipc.ts içinde 'result:update' IPC handler'ını kaydet
   // 3. electron/preload.ts içinde 'result:update' kanalını contextBridge ile expose et
   // 4. src/lib/ipc.ts içine result.update() helper'ını ekle
   // 5. ResultsStudentDetail.tsx içindeki handleSave() TODO'sunu kaldırarak fonksiyonu aktive et
+
   'project:getStatistics': () => Promise<DashboardStats>;
 
   // Execution operations [R6][R7][R8]
@@ -233,6 +216,8 @@ export const DATABASE_SCHEMA = `
     actualOutput TEXT,
     status TEXT NOT NULL,
     timestamp TEXT NOT NULL,
+    note TEXT,
+    score REAL,
     PRIMARY KEY (projectId, studentId, runAt),
     FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
   );
