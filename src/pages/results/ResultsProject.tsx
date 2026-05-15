@@ -10,6 +10,7 @@ import { Icon } from '@/components/shared/Icon';
 import { LangDot } from '@/components/shared/LangDot';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { cardStyle } from '@/components/shared/StatCard';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,8 @@ export default function ResultsProject() {
   const [filter, setFilter] = useState<Filter>('ALL');
   const [sortKey, setSortKey] = useState<SortKey>('studentId');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -87,6 +90,20 @@ export default function ResultsProject() {
     } else {
       setSortKey(key);
       setSortDir('asc');
+    }
+  }
+
+  async function handleDeleteStudent() {
+    if (!deleteTarget || !project) return;
+    setDeleting(true);
+    try {
+      await ipc.execution.deleteStudent(project.id, deleteTarget);
+      setAllResults((prev) => prev.filter((r) => r.studentId !== deleteTarget));
+    } catch (err: any) {
+      alert(`Failed to delete student: ${err.message}`);
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   }
 
@@ -190,42 +207,89 @@ export default function ResultsProject() {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((r) => (
-              <tr
-                key={r.studentId}
-                style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                onClick={() => navigate(`/results/${project.id}/${r.studentId}`)}
-              >
-                <td
+        {sorted.map((r) => (
+          <tr
+            key={r.studentId}
+            style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            onClick={() => navigate(`/results/${project.id}/${r.studentId}`)}
+          >
+            <td
+              style={{
+                padding: '12px 16px',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontWeight: 600,
+              }}
+            >
+              {r.studentId}
+            </td>
+            <td style={{ padding: '12px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <StatusBadge status={r.status} />
+                {(r.executionError || r.compileError) && (
+                  <span
+                    title={r.executionError || r.compileError}
+                    style={{
+                      cursor: 'help',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      color: 'var(--red)',
+                      opacity: 0.7,
+                    }}
+                  >
+                    <Icon name="alert" size={13} color="var(--red)" />
+                  </span>
+                )}
+              </div>
+            </td>
+            <td style={{ padding: '12px 16px' }}>
+              {r.outputMatched ? (
+                <span style={{ color: 'var(--green)', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Icon name="check" size={13} color="var(--green)" /> Matched
+                </span>
+              ) : (
+                <span style={{ color: 'var(--red)', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Icon name="x" size={13} color="var(--red)" /> Mismatch
+                </span>
+              )}
+            </td>
+            <td
+              style={{ padding: '8px 16px', textAlign: 'right' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); ipc.execution.openStudentFolder(project.id, r.studentId); }}
+                  title="Open student folder"
                   style={{
-                    padding: '12px 16px',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontWeight: 600,
+                    display: 'flex', alignItems: 'center',
+                    padding: '5px 8px', borderRadius: 6,
+                    border: '1px solid var(--border)',
+                    background: 'transparent', color: 'var(--text-muted)',
+                    cursor: 'pointer', fontFamily: 'inherit',
                   }}
                 >
-                  {r.studentId}
-                </td>
-                <td style={{ padding: '12px 16px' }}>
-                  <StatusBadge status={r.status} />
-                </td>
-                <td style={{ padding: '12px 16px' }}>
-                  {r.outputMatched ? (
-                    <span style={{ color: 'var(--green)', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <Icon name="check" size={13} color="var(--green)" /> Matched
-                    </span>
-                  ) : (
-                    <span style={{ color: 'var(--red)', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <Icon name="x" size={13} color="var(--red)" /> Mismatch
-                    </span>
-                  )}
-                </td>
-                <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                  <Icon name="chevronRight" size={14} color="var(--text-muted)" />
-                </td>
-              </tr>
-            ))}
+                  <Icon name="externalLink" size={13} />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setDeleteTarget(r.studentId); }}
+                  title="Delete this student"
+                  style={{
+                    display: 'flex', alignItems: 'center',
+                    padding: '5px 8px', borderRadius: 6,
+                    border: '1px solid var(--red)',
+                    background: 'var(--red-dim)', color: 'var(--red)',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  <Icon name="trash" size={13} color="var(--red)" />
+                </button>
+                <Icon name="chevronRight" size={14} color="var(--text-muted)" />
+              </div>
+            </td>
+          </tr>
+        ))}
 
             {sorted.length === 0 && (
               <tr>
@@ -237,6 +301,16 @@ export default function ResultsProject() {
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDeleteStudent}
+        title="Delete Student"
+        message={`Are you sure you want to delete student "${deleteTarget}"? This will remove their submission folder and all results. This action cannot be undone.`}
+        confirmText={deleting ? 'Deleting…' : 'Delete'}
+        confirmColor="var(--red)"
+      />
     </div>
   );
 }
