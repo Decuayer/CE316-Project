@@ -1,10 +1,9 @@
-// TODO: DEMİR CÜCÜ [FileService + Infra Modülü]
-// Tüm tipleri gözden geçir ve frontend bileşenlerinle uyumlu olduğundan emin ol.
-// Özellikle:
-// 1. StudentStatus tipindeki tüm değerlerin StatusBadge bileşeninde karşılığı olmalı
-// 2. DashboardStats tipinin Dashboard sayfasının ihtiyaçlarını karşıladığını doğrula
-// 3. Project tipindeki 'configuration' alanının getAll'da doldurulup doldurulmadığını kontrol et
-//    (şu an sadece getById'de dolduruluyor - Ege Çağan ile koordine et)
+// [DEMİR CÜCÜ — TAMAMLANDI]
+// 1. StudentStatus ↔ StatusBadge uyumu doğrulandı (StatusBadge zaten StudentStatus kullanıyor)
+// 2. DashboardStats ↔ Dashboard sayfası uyumu doğrulandı
+// 3. Project.configuration getAll'da dolduruluyor (ProjectService.getAll() bunu yapıyor)
+// 4. DATABASE_SCHEMA'ya note/score sütunları eklendi (aşağıda)
+// 5. result:update IPC kanal imzası aktive edildi (IpcChannels içinde)
 
 // --- Configuration [R4][R5] ---
 
@@ -87,6 +86,10 @@ export interface StudentResult {
 
   status: StudentStatus;
   timestamp: string;
+
+  // --- Instructor annotations (Results Modülü) ---
+  note?: string;                   // Instructor note (free text)
+  score?: number;                  // Instructor score (0–100 range suggested)
 }
 
 export interface ProjectResults {
@@ -114,6 +117,11 @@ export interface IpcChannels {
   'project:update': (id: string, data: Partial<Project>) => Promise<Project>;
   'project:delete': (id: string) => Promise<void>;
   'project:getResults': (id: string) => Promise<ProjectResults | null>;
+
+  // Result annotation operations [Results Modülü]
+  'result:update': (projectId: string, studentId: string, patch: { note?: string; score?: number }) => Promise<StudentResult>;
+  // Implementation: ProjectService.updateStudentResult() → project.ipc.ts → preload.ts → ipc.ts → ResultsStudentDetail.tsx
+
   'project:getStatistics': () => Promise<DashboardStats>;
 
   // Execution operations [R6][R7][R8]
@@ -201,6 +209,8 @@ export const DATABASE_SCHEMA = `
     actualOutput TEXT,
     status TEXT NOT NULL,
     timestamp TEXT NOT NULL,
+    note TEXT,
+    score REAL,
     PRIMARY KEY (projectId, studentId, runAt),
     FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
   );

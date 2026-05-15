@@ -18,6 +18,7 @@ import type {
   Configuration,
   Project,
   ProjectResults,
+  StudentResult,
   DashboardStats,
   DataSource,
 } from '@shared/types';
@@ -77,5 +78,14 @@ export const ipc = {
       defaultName: string,
       filters?: { name: string; extensions: string[] }[],
     ): Promise<string | null> => window.api.dialog.saveFile(defaultName, filters),
+  },
+
+  // ------------------------- Result Annotations [Results Modülü] -----------
+  result: {
+    update: (
+      projectId: string,
+      studentId: string,
+      patch: { note?: string; score?: number },
+    ): Promise<StudentResult> => window.api.result.update(projectId, studentId, patch),
   },
 };

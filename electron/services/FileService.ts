@@ -89,10 +89,10 @@ export class FileService {
     return entries.filter(e => e.isDirectory()).map(e => e.name);
   }
 
-  // TODO: DEMİR CÜCÜ [FileService + Infra Modülü]
-  // readFile(): Dosya içeriğini string olarak oku.
-  // ExecutionService.resolveDataSource() metodu bu fonksiyona ihtiyaç duyuyor.
-  // fs.readFile(filePath, 'utf-8') kullanarak implement et.
+  /**
+   * Reads a file and returns its content as a UTF-8 string.
+   * Used by ExecutionService.resolveDataSource() to read file-based input/output sources.
+   */
   async readFile(filePath: string): Promise<string> {
     return await fs.readFile(filePath, 'utf-8');
   }

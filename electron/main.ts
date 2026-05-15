@@ -12,8 +12,7 @@ const APP_DATA_DIR = path.join(app.getPath('home'), '.iae');
 
 let mainWindow: BrowserWindow | null = null;
 
-// TODO: DEMİR CÜCÜ [FileService + Infra Modülü]
-// dbService referansını modül seviyesinde tut ki app quit event'inde close() çağrılabilsin.
+// DB service reference held at module level so it can be closed on app quit.
 let dbService: DatabaseService | null = null;
 
 async function initializeApp() {
@@ -104,9 +103,7 @@ app.on('activate', () => {
   }
 });
 
-// TODO: DEMİR CÜCÜ [FileService + Infra Modülü]
-// Uygulama kapanmadan önce veritabanı bağlantısını temiz şekilde kapat.
-// Bu event handler'ı ekle:
+// Graceful shutdown: close the SQLite connection before the process exits.
 app.on('before-quit', () => {
   if (dbService) {
     dbService.close();

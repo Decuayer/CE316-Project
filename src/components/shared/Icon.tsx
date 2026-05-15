@@ -15,12 +15,17 @@ export type IconName =
   | 'search'
   | 'chevron'
   | 'chevronLeft'
+  | 'chevronRight'
+  | 'chevronUp'
+  | 'chevronDown'
   | 'terminal'
   | 'upload'
   | 'student'
   | 'bar'
   | 'folder'
-  | 'trash';
+  | 'trash'
+  | 'diff'
+  | 'edit';
 
 interface IconProps {
   name: IconName;
@@ -99,6 +104,9 @@ const paths: Record<IconName, React.ReactNode> = {
   ),
   chevron: <polyline points="9 18 15 12 9 6" />,
   chevronLeft: <polyline points="15 18 9 12 15 6" />,
+  chevronRight: <polyline points="9 18 15 12 9 6" />,
+  chevronUp: <polyline points="18 15 12 9 6 15" />,
+  chevronDown: <polyline points="6 9 12 15 18 9" />,
   terminal: (
     <>
       <polyline points="4 17 10 11 4 5" />
@@ -134,6 +142,19 @@ const paths: Record<IconName, React.ReactNode> = {
       <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
       <path d="M10 11v6M14 11v6" />
       <path d="M9 6V4h6v2" />
+    </>
+  ),
+  diff: (
+    <>
+      <line x1="5" y1="12" x2="19" y2="12" />
+      <line x1="12" y1="5" x2="12" y2="12" />
+      <line x1="12" y1="12" x2="12" y2="19" />
+    </>
+  ),
+  edit: (
+    <>
+      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
     </>
   ),
 };

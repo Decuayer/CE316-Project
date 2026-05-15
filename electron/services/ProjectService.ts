@@ -234,4 +234,68 @@ export class ProjectService {
       statusBreakdown,
     };
   }
+  /**
+   * Updates the instructor annotations (note and/or score) for a specific student result.
+   *
+   * Targets the most recent run for the given project/student pair.
+   * Returns the updated StudentResult row, or throws if no result is found.
+   */
+  async updateStudentResult(
+    projectId: string,
+    studentId: string,
+    patch: { note?: string; score?: number }
+  ): Promise<import('../../shared/types').StudentResult> {
+    const db = this.dbService.getDb();
+
+    // Find the most recent runAt for this project/student pair
+    const latest = db
+      .prepare(
+        'SELECT runAt FROM results WHERE projectId = ? AND studentId = ? ORDER BY runAt DESC LIMIT 1'
+      )
+      .get(projectId, studentId) as { runAt: string } | undefined;
+
+    if (!latest) {
+      throw new Error(`No result found for student "${studentId}" in project "${projectId}"`);
+    }
+
+    // Build SET clause dynamically based on what is in the patch
+    const sets: string[] = [];
+    const values: any[] = [];
+
+    if (patch.note !== undefined) {
+      sets.push('note = ?');
+      values.push(patch.note);
+    }
+    if (patch.score !== undefined) {
+      sets.push('score = ?');
+      values.push(patch.score);
+    }
+
+    if (sets.length === 0) {
+      throw new Error('updateStudentResult: patch must contain at least one field (note or score)');
+    }
+
+    values.push(projectId, studentId, latest.runAt);
+
+    db.prepare(
+      `UPDATE results SET ${sets.join(', ')} WHERE projectId = ? AND studentId = ? AND runAt = ?`
+    ).run(...values);
+
+    // Return the updated row
+    const row = db
+      .prepare('SELECT * FROM results WHERE projectId = ? AND studentId = ? AND runAt = ?')
+      .get(projectId, studentId, latest.runAt) as any;
+
+    return {
+      ...row,
+      zipExtracted: !!row.zipExtracted,
+      sourceFound: !!row.sourceFound,
+      compiled: !!row.compiled,
+      executed: !!row.executed,
+      executionTimedOut: !!row.executionTimedOut,
+      outputMatched: !!row.outputMatched,
+      note: row.note ?? undefined,
+      score: row.score ?? undefined,
+    };
+  }
 }
