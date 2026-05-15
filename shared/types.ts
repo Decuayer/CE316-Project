@@ -120,14 +120,7 @@ export interface IpcChannels {
 
   // Result annotation operations [Results Modülü]
   'result:update': (projectId: string, studentId: string, patch: { note?: string; score?: number }) => Promise<StudentResult>;
-
-  // TODO: GÖRKE GÖYNÜGÜR [Results Modülü] — Adım 2: Backend implementasyonu
-  // Bu kanal imzası aktive edildi. Sıradaki adımlar:
-  // 1. electron/services/ProjectService.ts'e updateStudentResult() metodu ekle
-  // 2. electron/ipc/project.ipc.ts içinde 'result:update' IPC handler'ını kaydet
-  // 3. electron/preload.ts içinde 'result:update' kanalını contextBridge ile expose et
-  // 4. src/lib/ipc.ts içine result.update() helper'ını ekle
-  // 5. ResultsStudentDetail.tsx içindeki handleSave() TODO'sunu kaldırarak fonksiyonu aktive et
+  // Implementation: ProjectService.updateStudentResult() → project.ipc.ts → preload.ts → ipc.ts → ResultsStudentDetail.tsx
 
   'project:getStatistics': () => Promise<DashboardStats>;
 

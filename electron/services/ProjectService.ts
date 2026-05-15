@@ -239,10 +239,6 @@ export class ProjectService {
    *
    * Targets the most recent run for the given project/student pair.
    * Returns the updated StudentResult row, or throws if no result is found.
-   *
-   * TODO: GÖRKE GÖYNÜGÜR [Results Modülü]
-   * Bu metot implement edildi. Sıradaki adım:
-   * electron/ipc/project.ipc.ts'e 'result:update' handler'ını ekle.
    */
   async updateStudentResult(
     projectId: string,
