@@ -32,7 +32,7 @@ export function registerExecutionIpc(ipcMain: IpcMain, dbService: DatabaseServic
       if (!project) throw new Error(`Project not found: ${projectId}`);
       return await zipService.extractAll(dirPath, project.submissionsDir);
     } catch (error: any) {
-      throw new Error(error?.message ?? 'ZIP dizini bulunamadı veya bir hata oluştu');
+      throw new Error(error?.message ?? 'Failed to process ZIP directory');
     }
   });
 
@@ -102,7 +102,7 @@ export function registerExecutionIpc(ipcMain: IpcMain, dbService: DatabaseServic
       if (!project) throw new Error(`Project not found: ${projectId}`);
       return await zipService.listStudents(project.submissionsDir);
     } catch (error: any) {
-      throw new Error(error?.message ?? 'Öğrenci listesi alınamadı');
+      throw new Error(error?.message ?? 'Failed to list students');
     }
   });
 }

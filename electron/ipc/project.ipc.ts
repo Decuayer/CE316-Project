@@ -41,16 +41,13 @@ export function registerProjectIpc(ipcMain: IpcMain, dbService: DatabaseService,
     try {
       return await projectService.create(data);
     } catch (err: any) {
-      if (err.message.includes('bulunamadı') || err.message.includes('Configuration')) {
-        throw new Error(`Geçersiz konfigürasyon: ${err.message}`);
-      }
-      throw new Error(`Proje oluşturulamadı: ${err.message}`);
+      throw new Error(`Failed to create project: ${err.message}`);
     }
   });
 
   ipcMain.handle('project:update', async (_e, id: string, data) => {
     try {
-      // id ve configurationId değiştirilemez
+      // id and configurationId are immutable
       const { id: _id, configurationId: _cid, ...safeData } = data ?? {};
       return await projectService.update(id, safeData);
     } catch (err: any) {
@@ -62,7 +59,7 @@ export function registerProjectIpc(ipcMain: IpcMain, dbService: DatabaseService,
     try {
       return await projectService.delete(id);
     } catch (err: any) {
-      throw new Error(`Proje silinemedi: ${err.message}`);
+      throw new Error(`Failed to delete project: ${err.message}`);
     }
   });
 

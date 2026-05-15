@@ -123,9 +123,15 @@ export default function ProjectDetail() {
   };
 
   const handleCleanup = async () => {
-    await ipc.execution.cleanup(project.id);
-    setConfirmCleanup(false);
-    await load();
+    try {
+      await ipc.execution.cleanup(project.id);
+      setConfirmCleanup(false);
+      await load();
+    } catch (err: any) {
+      console.error('Cleanup failed:', err);
+      alert(`Cleanup failed: ${err.message}`);
+      setConfirmCleanup(false);
+    }
   };
 
   return (
@@ -340,7 +346,7 @@ export default function ProjectDetail() {
         onClose={() => setConfirmDelete(false)}
         onConfirm={handleDelete}
         title="Delete Project"
-        message={`"${project.name}" projesini ve tüm dosyalarını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`}
+        message={`Are you sure you want to delete "${project.name}" and all its files? This action cannot be undone.`}
         confirmText="Delete"
         confirmColor="var(--red)"
       />
@@ -350,7 +356,7 @@ export default function ProjectDetail() {
         onClose={() => setConfirmCleanup(false)}
         onConfirm={handleCleanup}
         title="Clean Up Artifacts"
-        message="Bu işlem her öğrencinin klasöründeki kaynak dosya dışındaki tüm dosyaları (derlenmiş çıktılar vb.) siler. Devam etmek istiyor musunuz?"
+        message="This will delete all compiled binaries and other build artifacts from each student's folder, keeping only the source file. Continue?"
         confirmText="Clean Up"
         confirmColor="var(--orange)"
       />

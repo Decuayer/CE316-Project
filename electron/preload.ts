@@ -92,7 +92,7 @@ const api = {
       invoke('dialog:saveFile', defaultName, filters),
   },
 
-  // --- Result annotation operations [Results Modülü] ---
+  // --- Result annotation operations [Results module] ---
   result: {
     update: (projectId: string, studentId: string, patch: { note?: string; score?: number }) =>
       invoke('result:update', projectId, studentId, patch),
