@@ -198,7 +198,14 @@ export class ExecutionService {
   }
 
   private async resolveDataSource(source: DataSource): Promise<string> {
-    if (source.type === 'text') return source.value;
+    if (source.type === 'text') {
+      // Parse common escape sequences so users can write \n in the config UI
+      // and have it treated as an actual newline when passed as argv or compared.
+      return source.value
+        .replace(/\\n/g, '\n')
+        .replace(/\\t/g, '\t')
+        .replace(/\\r/g, '\r');
+    }
     return fs.readFile(source.path, 'utf-8');
   }
 
