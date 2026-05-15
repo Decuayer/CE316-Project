@@ -155,7 +155,7 @@ export default function ResultsProject() {
           value={totalStudents > 0 ? `${passRate}%` : '—'}
           color={passRate >= 70 ? 'var(--green)' : passRate >= 40 ? 'var(--orange)' : 'var(--red)'}
         />
-        <MiniStat label="Created" value={project.createdAt} />
+        <MiniStat label="Created" value={new Date(project.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })} />
       </div>
 
       {/* Filter bar */}
