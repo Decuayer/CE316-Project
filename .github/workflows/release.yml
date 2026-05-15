@@ -13,6 +13,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ── 1. Verify tag matches package.json ──────────────────────────────────────
   verify:
     name: Verify tag matches package.json
     runs-on: ubuntu-latest
@@ -23,6 +24,7 @@ jobs:
       - name: Verify tag matches package.json version
         run: ./.github/scripts/verify-tag-version.sh "${GITHUB_REF_NAME}"
 
+  # ── 2. Build installers on each platform ────────────────────────────────────
   build:
     name: Build ${{ matrix.name }} installer
     needs: verify
@@ -33,7 +35,7 @@ jobs:
         include:
           - os: windows-latest
             name: windows
-          - os: macos-14
+          - os: macos-14          # Apple Silicon runner
             name: macos
     steps:
       - name: Checkout
@@ -48,7 +50,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build and package
+      # Skip macOS code-signing in CI (no Apple Developer cert available)
+      - name: Build and package (macOS — no signing)
+        if: runner.os == 'macOS'
+        run: npm run dist -- --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Build and package (Windows)
+        if: runner.os == 'Windows'
         run: npm run dist -- --publish never
 
       - name: Upload installers
@@ -62,11 +72,17 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  # ── 3. Publish GitHub Release ───────────────────────────────────────────────
   release:
-    name: Create draft GitHub Release
+    name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout (for release notes template)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Download all installer artifacts
         uses: actions/download-artifact@v4
         with:
@@ -74,16 +90,43 @@ jobs:
           merge-multiple: true
 
       - name: List downloaded files
-        run: ls -lh artifacts
+        run: ls -lh artifacts/
 
-      - name: Create draft release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          draft: true
-          prerelease: false
+          name: "IAE ${{ github.ref_name }} — Working Prototype"
+          draft: false
+          prerelease: true
           generate_release_notes: true
+          body: |
+            ## IAE — Integrated Assignment Environment
+            ### ${{ github.ref_name }} · Working Prototype
+
+            This is a **working prototype** release of IAE, an Electron-based desktop application
+            for automated grading and evaluation of student code submissions.
+
+            ---
+
+            ### ✨ What's in this release
+            <!-- Auto-generated commit log is appended below -->
+
+            ### 📥 Installation
+
+            | Platform | File | Notes |
+            |----------|------|-------|
+            | **macOS (Apple Silicon)** | `.dmg` | Drag to Applications. If blocked by Gatekeeper: right-click → Open |
+            | **macOS (Intel)** | `.dmg` (x64) | Same as above |
+            | **Windows** | `.exe` | Run the NSIS installer |
+
+            > **macOS note:** This build is not notarized. On first launch, right-click the app and choose **Open** to bypass Gatekeeper.
+
+            ### ⚙️ Requirements
+            - The relevant compiler must be installed and on PATH (gcc, javac, python3, etc.)
+            - Node.js is **not** required — the app is fully self-contained
+
+            ---
           fail_on_unmatched_files: true
           files: |
             artifacts/*.exe

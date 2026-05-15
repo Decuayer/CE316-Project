@@ -1,36 +1,49 @@
-# TODO: DEMİR CÜCÜ [FileService + Infra Modülü]
-# 1. build/ klasörü oluştur ve içine icon.ico dosyası ekle [R1]
-#    - 256x256 px minimum, ICO formatında
-#    - Uygulama logosu olarak IAE temalı bir ikon tasarla
-# 2. build/icon.png de ekle (macOS için)
-# 3. Installer'ın doğru çalıştığını test et: npm run dist
 appId: com.ce316.iae
 productName: "Integrated Assignment Environment"
+
 directories:
   buildResources: build
   output: release
+
 files:
   - dist
   - dist-electron
+
+# ─── macOS ────────────────────────────────────────────────────────────────────
+mac:
+  icon: build/icon.png
+  category: public.app-category.developer-tools
+  darkModeSupport: true
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+    - target: zip
+      arch:
+        - arm64
+        - x64
+
+dmg:
+  title: "IAE ${version}"
+  background: build/dmg-background.png
+  window:
+    width: 660
+    height: 400
+
+# ─── Windows ──────────────────────────────────────────────────────────────────
 win:
+  icon: build/icon.ico
   target:
     - target: nsis
       arch:
         - x64
-  icon: build/icon.ico
+
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: "IAE"
-mac:
-  target:
-    - target: dmg
-      arch:
-        - arm64
-    - target: zip
-      arch:
-        - arm64
-  icon: build/icon.png
-  category: public.app-category.developer-tools
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico

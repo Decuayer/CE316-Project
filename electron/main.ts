@@ -10,6 +10,10 @@ import { DatabaseService } from './services/DatabaseService';
 const currentDirPath = path.dirname(fileURLToPath(import.meta.url));
 const APP_DATA_DIR = path.join(app.getPath('home'), '.iae');
 
+// Icon path: build/ lives one level above dist-electron/
+// Works in both dev (source root) and production (dist-electron/ → ../build/)
+const ICON_PATH = path.join(currentDirPath, '../build/icon.png');
+
 let mainWindow: BrowserWindow | null = null;
 
 // DB service reference held at module level so it can be closed on app quit.
@@ -75,6 +79,7 @@ async function createWindow() {
     minWidth: 1024,
     minHeight: 700,
     title: 'IAE - Integrated Assignment Environment',
+    icon: ICON_PATH,
     backgroundColor: '#09090b', // zinc-950
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 16, y: 16 },
@@ -85,6 +90,11 @@ async function createWindow() {
       sandbox: false,
     },
   });
+
+  // macOS: set Dock icon explicitly (works in both dev and packaged builds)
+  if (process.platform === 'darwin' && app.dock) {
+    app.dock.setIcon(ICON_PATH);
+  }
 
   // Load the app
   if (process.env.VITE_DEV_SERVER_URL) {
