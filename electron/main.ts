@@ -91,8 +91,8 @@ async function createWindow() {
     },
   });
 
-  // macOS: set Dock icon explicitly (works in both dev and packaged builds)
-  if (process.platform === 'darwin' && app.dock) {
+  // Packaged builds: build/ is outside the asar, so setIcon throws and kills loadFile (blank window). macOS uses Contents/Resources/icon.icns automatically.
+  if (process.platform === 'darwin' && app.dock && !app.isPackaged) {
     app.dock.setIcon(ICON_PATH);
   }
 
