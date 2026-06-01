@@ -137,7 +137,7 @@ export class ExecutionService {
 
     base.expectedOutput = expectedOutput;
     base.actualOutput = actualOutput;
-    const matched = actualOutput.trim() === expectedOutput.trim();
+    const matched = this.normalizeOutput(actualOutput) === this.normalizeOutput(expectedOutput);
     base.outputMatched = matched;
 
     return { ...base, status: matched ? 'pass' as const : 'fail' as const };
@@ -215,5 +215,22 @@ export class ExecutionService {
       lines.pop();
     }
     return lines;
+  }
+
+  /**
+   * Normalises a program's output for comparison purposes.
+   *
+   * Problems this addresses:
+   *   1. Windows programs emit CRLF (\r\n) line endings; Unix programs emit
+   *      only LF (\n).  A student running the grader on Windows would always
+   *      see "fail" for multi-line output even when the content is identical,
+   *      because the raw strings differ byte-for-byte.
+   *   2. Trailing whitespace / trailing newline differences should not count
+   *      as a mismatch.
+   *
+   * Strategy: strip every bare \r, then trim leading/trailing whitespace.
+   */
+  private normalizeOutput(s: string): string {
+    return s.replace(/\r/g, '').trim();
   }
 }
